@@ -358,11 +358,35 @@ export async function select<T extends JulesDomain>(
       sessionEntries.push(sessionEntry);
     }
 
+    // Optimization: Map query filters (such as type, limits, cursors) down to the storage selection.
+    // This avoids fetching, parsing, and hydrating every activity in the session.
+    const selectOptions = toActivitySelectOptions(
+      query.where as WhereClause<'activities'>,
+    );
+
+    // If sorting order is ascending, we can safely apply startAfter and limit to storage scan.
+    if (query.order === 'asc') {
+      if (query.startAfter) {
+        selectOptions.after = query.startAfter;
+      }
+      if (query.limit !== undefined) {
+        selectOptions.limit = query.limit;
+      }
+    }
+
+    // Optimization: Compute activityWhere outside the loop to avoid redundant operations and GC overhead.
+    const activityWhere = where
+      ? Object.fromEntries(
+          Object.entries(where).filter(([k]) => k !== 'sessionId'),
+        )
+      : undefined;
+
     const sessionResults = await pMap(
       sessionEntries,
       async (sessionEntry) => {
         const sessionClient = await client.session(sessionEntry.id);
-        const localActivities = await sessionClient.activities.select({});
+        const localActivities =
+          await sessionClient.activities.select(selectOptions);
         const filtered: Record<string, unknown>[] = [];
 
         for (const act of localActivities) {
@@ -372,11 +396,6 @@ export async function select<T extends JulesDomain>(
 
           // Apply dot-notation filters with existential matching
           // Exclude sessionId from activity-level matching since it's handled by session routing
-          const activityWhere = where
-            ? Object.fromEntries(
-                Object.entries(where).filter(([k]) => k !== 'sessionId'),
-              )
-            : undefined;
           if (!matchWhere(act, activityWhere)) continue;
 
           const item = applyProjection(

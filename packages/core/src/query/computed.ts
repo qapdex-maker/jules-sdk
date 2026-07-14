@@ -95,11 +95,6 @@ export function injectActivityComputedFields(
   activity: Activity,
   selectFields?: string[],
 ): Activity & { artifactCount?: number; summary?: string } {
-  const result = { ...activity } as Activity & {
-    artifactCount?: number;
-    summary?: string;
-  };
-
   // Determine which computed fields to include
   const includeAll =
     !selectFields || selectFields.length === 0 || selectFields.includes('*');
@@ -108,11 +103,27 @@ export function injectActivityComputedFields(
     includeAll || selectFields?.includes('artifactCount');
   const needsSummary = includeAll || selectFields?.includes('summary');
 
-  if (needsArtifactCount) {
+  if (!needsArtifactCount && !needsSummary) {
+    return activity;
+  }
+
+  // Check if they are already present to avoid redundant computation and cloning
+  const hasArtifactCount = 'artifactCount' in activity;
+  const hasSummary = 'summary' in activity;
+  if ((!needsArtifactCount || hasArtifactCount) && (!needsSummary || hasSummary)) {
+    return activity;
+  }
+
+  const result = { ...activity } as Activity & {
+    artifactCount?: number;
+    summary?: string;
+  };
+
+  if (needsArtifactCount && !hasArtifactCount) {
     result.artifactCount = computeArtifactCount(activity);
   }
 
-  if (needsSummary) {
+  if (needsSummary && !hasSummary) {
     result.summary = computeSummary(activity);
   }
 
@@ -129,16 +140,21 @@ export function injectActivityComputedFields(
 export function injectSessionComputedFields<
   T extends { createTime?: string; updateTime?: string },
 >(session: T, selectFields?: string[]): T & { durationMs?: number } {
-  const result = { ...session } as T & { durationMs?: number };
-
   const includeAll =
     !selectFields || selectFields.length === 0 || selectFields.includes('*');
 
   const needsDurationMs = includeAll || selectFields?.includes('durationMs');
 
-  if (needsDurationMs) {
-    result.durationMs = computeDurationMs(session);
+  if (!needsDurationMs) {
+    return session as T & { durationMs?: number };
   }
+
+  if ('durationMs' in session) {
+    return session as T & { durationMs?: number };
+  }
+
+  const result = { ...session } as T & { durationMs?: number };
+  result.durationMs = computeDurationMs(session);
 
   return result;
 }

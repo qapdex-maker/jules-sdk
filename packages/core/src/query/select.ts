@@ -180,7 +180,12 @@ function applyProjection(
   }
 
   // If empty array or contains only '*', return all with computed
-  if (select.length === 0) {
+  if (select.length === 0 || (select.length === 1 && select[0] === '*')) {
+    // If withComputed is identical to doc (meaning no new computed fields were injected),
+    // shallow copy to avoid mutating the cached object while bypassing deep projection overhead.
+    if (withComputed === docRecord) {
+      return { ...docRecord };
+    }
     return withComputed as Record<string, unknown>;
   }
 

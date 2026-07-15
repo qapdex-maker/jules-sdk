@@ -115,6 +115,42 @@ describe('critical-paths', () => {
     expect(() => validateFilePath('../etc/passwd')).toThrow('PATH_TRAVERSAL');
   });
 
+  it('rejects file paths with absolute paths', async () => {
+    const { validateFilePath } = await import('../../shared/validators.js');
+    expect(() => validateFilePath('/etc/passwd')).toThrow('ABSOLUTE_PATH');
+    expect(() => validateFilePath('C:/Windows/System32')).toThrow(
+      'ABSOLUTE_PATH',
+    );
+  });
+
+  it('stageResolutionHandler rejects path traversal in fromFile', async () => {
+    const { scanHandler } = await import('../../reconcile/scan-handler.js');
+    const { stageResolutionHandler } = await import(
+      '../../reconcile/stage-resolution-handler.js'
+    );
+
+    await scanHandler({} as any, {
+      prs: [10, 11],
+      repo: 'owner/repo',
+    });
+
+    await expect(
+      stageResolutionHandler({
+        filePath: 'src/config.ts',
+        parents: ['main', '10', '11'],
+        fromFile: '../../etc/passwd',
+      }),
+    ).rejects.toThrow('PATH_TRAVERSAL');
+
+    await expect(
+      stageResolutionHandler({
+        filePath: 'src/config.ts',
+        parents: ['main', '10', '11'],
+        fromFile: '/etc/passwd',
+      }),
+    ).rejects.toThrow('ABSOLUTE_PATH');
+  });
+
   it('rejects file paths with control characters', async () => {
     const { validateFilePath } = await import('../../shared/validators.js');
     expect(() => validateFilePath('src/foo\x00.ts')).toThrow('CONTROL_CHAR');
@@ -372,7 +408,9 @@ describe('critical-paths', () => {
   // ─── 12. Error types & exit codes ─────────────────────────────
 
   it('ConflictError has exit code 1', async () => {
-    const { ConflictError, getExitCode } = await import('../../shared/errors.js');
+    const { ConflictError, getExitCode } = await import(
+      '../../shared/errors.js'
+    );
     const err = new ConflictError('test');
     expect(err.exitCode).toBe(1);
     expect(getExitCode(err)).toBe(1);

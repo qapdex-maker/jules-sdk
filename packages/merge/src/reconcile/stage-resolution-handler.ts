@@ -39,13 +39,14 @@ function resolveFileContent(input: StageInput): string {
 export async function stageResolutionHandler(rawInput: unknown) {
   const input = StageResolutionInputSchema.parse(rawInput);
   validateFilePath(input.filePath);
+  if (input.fromFile) {
+    validateFilePath(input.fromFile);
+  }
   const fileContent = resolveFileContent(input);
 
   const manifest = readManifest();
   if (!manifest) {
-    throw new Error(
-      'No active reconciliation manifest found. Run scan first.',
-    );
+    throw new Error('No active reconciliation manifest found. Run scan first.');
   }
 
   // Remove from pending

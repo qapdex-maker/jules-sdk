@@ -13,31 +13,30 @@
 // limitations under the License.
 
 export function validateFilePath(filePath: string): void {
-  if (filePath.includes("\x00") || /[\x01-\x1f\x7f]/.test(filePath)) {
+  if (filePath.includes('\x00') || /[\x01-\x1f\x7f]/.test(filePath)) {
     throw new Error(
       `CONTROL_CHAR: File path contains control characters: ${filePath}`,
     );
   }
-  const normalized = filePath.replace(/\\/g, "/");
-  const parts = normalized.split("/");
-  if (parts.some((p) => p === "..")) {
-    throw new Error(
-      `PATH_TRAVERSAL: File path escapes repo root: ${filePath}`,
-    );
+  const normalized = filePath.replace(/\\/g, '/');
+  if (normalized.startsWith('/') || /^[a-zA-Z]:/.test(normalized)) {
+    throw new Error(`ABSOLUTE_PATH: File path must be relative: ${filePath}`);
+  }
+  const parts = normalized.split('/');
+  if (parts.some((p) => p === '..')) {
+    throw new Error(`PATH_TRAVERSAL: File path escapes repo root: ${filePath}`);
   }
 }
 
 export function validateBranchName(branch: string): void {
-  if (branch.startsWith("refs/")) {
+  if (branch.startsWith('refs/')) {
     throw new Error(
       `RESERVED_BRANCH: Branch name must not start with refs/: ${branch}`,
     );
   }
   // git ref rules: no spaces, no control chars, no consecutive dots, no trailing dot/slash/lock
   if (/\s/.test(branch)) {
-    throw new Error(
-      `INVALID_BRANCH: Branch name contains spaces: ${branch}`,
-    );
+    throw new Error(`INVALID_BRANCH: Branch name contains spaces: ${branch}`);
   }
   if (/[\x00-\x1f\x7f~^:?*\[\\]/.test(branch)) {
     throw new Error(
@@ -55,8 +54,6 @@ export function validateBranchName(branch: string): void {
     );
   }
   if (/\.lock$/.test(branch)) {
-    throw new Error(
-      `INVALID_BRANCH: Branch name ends with .lock: ${branch}`,
-    );
+    throw new Error(`INVALID_BRANCH: Branch name ends with .lock: ${branch}`);
   }
 }

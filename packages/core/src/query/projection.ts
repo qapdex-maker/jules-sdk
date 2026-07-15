@@ -33,6 +33,8 @@ export interface SelectExpression {
   wildcard: boolean;
 }
 
+const selectExpressionCache = new Map<string, SelectExpression>();
+
 /**
  * Parse a select expression string into structured form
  *
@@ -43,18 +45,27 @@ export interface SelectExpression {
  * - "*" → { path: [], exclude: false, wildcard: true }
  */
 export function parseSelectExpression(expr: string): SelectExpression {
-  if (expr === '*') {
-    return { path: [], exclude: false, wildcard: true };
+  const cached = selectExpressionCache.get(expr);
+  if (cached) {
+    return cached;
   }
 
-  const exclude = expr.startsWith('-');
-  const pathStr = exclude ? expr.slice(1) : expr;
+  let result: SelectExpression;
+  if (expr === '*') {
+    result = { path: [], exclude: false, wildcard: true };
+  } else {
+    const exclude = expr.startsWith('-');
+    const pathStr = exclude ? expr.slice(1) : expr;
 
-  // Remove optional array markers like "[]" - they're implicit
-  const cleanPath = pathStr.replace(/\[\]/g, '');
-  const path = cleanPath.split('.').filter((p) => p.length > 0);
+    // Remove optional array markers like "[]" - they're implicit
+    const cleanPath = pathStr.replace(/\[\]/g, '');
+    const path = cleanPath.split('.').filter((p) => p.length > 0);
 
-  return { path, exclude, wildcard: false };
+    result = { path, exclude, wildcard: false };
+  }
+
+  selectExpressionCache.set(expr, result);
+  return result;
 }
 
 /**
@@ -150,11 +161,23 @@ export function deletePath(obj: unknown, path: string[]): void {
  */
 export function deepClone<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map((item) => deepClone(item)) as T;
+  if (Array.isArray(obj)) {
+    const len = obj.length;
+    const cloned = new Array(len);
+    for (let i = 0; i < len; i++) {
+      const val = obj[i];
+      cloned[i] = val === null || typeof val !== 'object' ? val : deepClone(val);
+    }
+    return cloned as T;
+  }
 
   const cloned: Record<string, unknown> = {};
-  for (const key of Object.keys(obj)) {
-    cloned[key] = deepClone((obj as Record<string, unknown>)[key]);
+  const keys = Object.keys(obj);
+  const len = keys.length;
+  for (let i = 0; i < len; i++) {
+    const key = keys[i];
+    const val = (obj as Record<string, unknown>)[key];
+    cloned[key] = val === null || typeof val !== 'object' ? val : deepClone(val);
   }
   return cloned as T;
 }

@@ -16,6 +16,7 @@
 
 // src/client.ts
 import { ApiClient } from './api.js';
+import { validateSessionId } from './utils/validators.js';
 import { createSourceManager } from './sources.js';
 import { join } from 'node:path';
 import { getRootDir } from './storage/root.js';
@@ -627,6 +628,7 @@ export class JulesClientImpl implements JulesClient {
     configOrId: SessionConfig | string,
   ): Promise<SessionClient> | SessionClient {
     if (typeof configOrId === 'string') {
+      validateSessionId(configOrId);
       const storage = this.storageFactory.activity(configOrId);
       return new SessionClientImpl(
         configOrId,

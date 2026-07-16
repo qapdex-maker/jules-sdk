@@ -18,6 +18,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Activity } from '../types.js';
 import { getRootDir } from './root.js';
+import { validateSessionId } from '../utils/validators.js';
 import { GlobalCacheMetadata, SessionMetadata } from './types.js';
 
 /**
@@ -49,8 +50,10 @@ export async function getSessionCacheInfo(
   sessionId: string,
   rootDirOverride?: string,
 ): Promise<SessionCacheInfo | null> {
+  validateSessionId(sessionId);
   const rootDir = rootDirOverride ?? getRootDir();
-  const sessionDir = path.join(rootDir, '.jules/cache', sessionId);
+  const cleanId = sessionId.replace(/^sessions\//, '');
+  const sessionDir = path.join(rootDir, '.jules/cache', cleanId);
   const sessionPath = path.join(sessionDir, 'session.json');
   const metadataPath = path.join(sessionDir, 'metadata.json');
 
@@ -204,11 +207,13 @@ export async function getLatestActivities(
   n: number,
   rootDirOverride?: string,
 ): Promise<Activity[]> {
+  validateSessionId(sessionId);
   const rootDir = rootDirOverride ?? getRootDir();
+  const cleanId = sessionId.replace(/^sessions\//, '');
   const activitiesPath = path.join(
     rootDir,
     '.jules/cache',
-    sessionId,
+    cleanId,
     'activities.jsonl',
   );
 

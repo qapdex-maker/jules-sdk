@@ -1,3 +1,8 @@
+## 2026-07-16 - Path Traversal Vulnerability via Session ID Input
+**Vulnerability:** The client session initialization and local cache file storage used user-supplied or untrusted `sessionId` inputs directly to resolve cache directories, which allowed directory traversal and file inclusion when malicious IDs containing path traversal characters like `..`, `/`, or `\\` were provided.
+**Learning:** Session IDs must be rigorously validated before performing any disk I/O, as they are implicitly used as subdirectory names in local cache structures. By enforcing flat, alphanumeric string constraints (no directory separators or control characters), path traversal is completely eliminated.
+**Prevention:** Always validate all path parameters and identifiers like `sessionId` to ensure they are strictly flat (no `/`, `\\`, control chars, `.`, or `..`) before utilizing them in file system path resolution.
+
 ## 2026-07-09 - Path Traversal Vulnerability in ApiClient
 **Vulnerability:** The `ApiClient.resolveUrl` method used simple string concatenation to construct URLs, which allowed malicious paths like `../../secret` to escape the intended `baseUrl`.
 **Learning:** Using the `URL` constructor with a base URL is not sufficient to prevent path traversal if the path starts with `..`. The resulting URL can still point outside the base path.

@@ -14,6 +14,7 @@
 
 import type { InitEvent } from '../../events/init.js';
 import type { RenderContext } from '../spec.js';
+import { ansiLink } from '../session-url.js';
 
 /** Render an init-domain event. */
 export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
@@ -38,13 +39,17 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       break;
     case 'init:pr:created':
       ctx.stopSpinner(`PR #${event.number} created`);
-      ctx.info(`  ${event.url}`);
+      ctx.info(`  ${ansiLink(event.url, event.url)}`);
       break;
     case 'init:done':
-      ctx.success(`Fleet initialized — PR: ${event.prUrl}`);
+      ctx.success(
+        `Fleet initialized — PR: ${ansiLink(event.prUrl, event.prUrl)}`,
+      );
       break;
     case 'init:auth:detected':
-      ctx.success(`Auth: ${event.method === 'token' ? 'GITHUB_TOKEN' : 'GitHub App'}`);
+      ctx.success(
+        `Auth: ${event.method === 'token' ? 'GITHUB_TOKEN' : 'GitHub App'}`,
+      );
       break;
     case 'init:secret:uploading':
       ctx.startSpinner(`Uploading secret ${event.name}…`);

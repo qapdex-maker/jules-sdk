@@ -14,13 +14,18 @@
 
 import type { AnalyzeEvent } from '../../events/analyze.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl } from '../session-url.js';
+import { sessionUrl, ansiLink } from '../session-url.js';
 
 /** Render an analyze-domain event. */
-export function renderAnalyzeEvent(event: AnalyzeEvent, ctx: RenderContext): void {
+export function renderAnalyzeEvent(
+  event: AnalyzeEvent,
+  ctx: RenderContext,
+): void {
   switch (event.type) {
     case 'analyze:start':
-      ctx.info(`Analyzing ${event.goalCount} goal(s) for ${event.owner}/${event.repo}`);
+      ctx.info(
+        `Analyzing ${event.goalCount} goal(s) for ${event.owner}/${event.repo}`,
+      );
       break;
     case 'analyze:goal:start':
       if (event.total > 1) {
@@ -43,7 +48,7 @@ export function renderAnalyzeEvent(event: AnalyzeEvent, ctx: RenderContext): voi
       break;
     case 'analyze:session:started':
       ctx.stopSpinner(`Session started: ${event.id}`);
-      ctx.info(`  ${sessionUrl(event.id)}`);
+      ctx.info(`  ${ansiLink(sessionUrl(event.id), sessionUrl(event.id))}`);
       break;
     case 'analyze:session:failed':
       ctx.stopSpinner();

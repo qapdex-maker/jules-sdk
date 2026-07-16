@@ -417,6 +417,10 @@ export class NodeSessionStorage implements SessionStorage {
   private indexFilePath: string;
   private initialized = false;
 
+  // In-memory caching for index file entries to avoid repeated disk reads and line-by-line parsing
+  private cachedEntries: SessionIndexEntry[] | null = null;
+  private lastMtimeMs = 0;
+
   constructor(rootDir: string) {
     this.cacheDir = path.resolve(rootDir, '.jules/cache');
     this.indexFilePath = path.join(this.cacheDir, 'sessions.jsonl');
@@ -503,10 +507,18 @@ export class NodeSessionStorage implements SessionStorage {
   async *scanIndex(): AsyncIterable<SessionIndexEntry> {
     await this.init();
 
-    // Read the raw stream
-    // Note: In Phase 3 (Query Planner), we will optimize this to read backward
-    // or keep an in-memory map to dedupe instantly.
     try {
+      const stats = await fs.stat(this.indexFilePath);
+      const mtimeMs = stats.mtimeMs;
+
+      // If mtime matches our cache, yield from memory instantly (O(1) vs parsing file)
+      if (this.cachedEntries && this.lastMtimeMs === mtimeMs) {
+        for (const entry of this.cachedEntries) {
+          yield entry;
+        }
+        return;
+      }
+
       const fileStream = createReadStream(this.indexFilePath, {
         encoding: 'utf8',
       });
@@ -528,11 +540,19 @@ export class NodeSessionStorage implements SessionStorage {
         }
       }
 
-      for (const entry of entries.values()) {
+      const deduplicated = Array.from(entries.values());
+      this.cachedEntries = deduplicated;
+      this.lastMtimeMs = mtimeMs;
+
+      for (const entry of deduplicated) {
         yield entry;
       }
     } catch (e: any) {
-      if (e.code === 'ENOENT') return; // No index yet
+      if (e.code === 'ENOENT') {
+        this.cachedEntries = null;
+        this.lastMtimeMs = 0;
+        return; // No index yet
+      }
       throw e;
     }
   }

@@ -222,13 +222,14 @@ export async function select<T extends JulesDomain>(
       if (chunk.length === 0) return;
 
       // PASS 2: Hydration (Heavy Data) - Parallelized
+      // Concurrency boosted from 10 to 25 to maximize throughput for disk/network reads
       const hydrated = await pMap(
         chunk,
         async (entry) => {
           const cached = await storage.get(entry.id);
           return { entry, cached };
         },
-        { concurrency: 10 },
+        { concurrency: 25 },
       );
 
       for (const { cached } of hydrated) {

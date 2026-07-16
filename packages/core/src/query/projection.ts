@@ -166,7 +166,8 @@ export function deepClone<T>(obj: T): T {
     const cloned = new Array(len);
     for (let i = 0; i < len; i++) {
       const val = obj[i];
-      cloned[i] = val === null || typeof val !== 'object' ? val : deepClone(val);
+      cloned[i] =
+        val === null || typeof val !== 'object' ? val : deepClone(val);
     }
     return cloned as T;
   }
@@ -177,7 +178,8 @@ export function deepClone<T>(obj: T): T {
   for (let i = 0; i < len; i++) {
     const key = keys[i];
     const val = (obj as Record<string, unknown>)[key];
-    cloned[key] = val === null || typeof val !== 'object' ? val : deepClone(val);
+    cloned[key] =
+      val === null || typeof val !== 'object' ? val : deepClone(val);
   }
   return cloned as T;
 }
@@ -226,6 +228,50 @@ function projectArray(
  * @param selects Array of select expression strings
  * @returns Projected document with only selected fields
  */
+/**
+ * Cached Projection Plan to avoid re-parsing select expressions,
+ * re-filtering inclusions/exclusions, and rebuilding grouping maps
+ * for every single document in a multi-document query.
+ */
+export interface ProjectionPlan {
+  hasWildcard: boolean;
+  byTopLevel: Map<string, string[][]>;
+  exclusions: SelectExpression[];
+}
+
+const projectionPlanCache = new Map<string, ProjectionPlan>();
+
+/**
+ * Get or compile a projection plan for a given list of select expressions.
+ * This yields an O(1) cache lookup after the first projected document.
+ */
+export function getProjectionPlan(selects: string[]): ProjectionPlan {
+  const cacheKey = selects.join(',');
+  let plan = projectionPlanCache.get(cacheKey);
+  if (!plan) {
+    const parsed = selects.map(parseSelectExpression);
+    const hasWildcard = parsed.some((p) => p.wildcard && !p.exclude);
+    const inclusions = parsed.filter((p) => !p.exclude && !p.wildcard);
+    const exclusions = parsed.filter((p) => p.exclude);
+
+    const byTopLevel = new Map<string, string[][]>();
+    for (const incl of inclusions) {
+      if (incl.path.length === 0) continue;
+      const top = incl.path[0];
+      let subPaths = byTopLevel.get(top);
+      if (!subPaths) {
+        subPaths = [];
+        byTopLevel.set(top, subPaths);
+      }
+      subPaths.push(incl.path.slice(1));
+    }
+
+    plan = { hasWildcard, byTopLevel, exclusions };
+    projectionPlanCache.set(cacheKey, plan);
+  }
+  return plan;
+}
+
 export function projectDocument(
   doc: Record<string, unknown>,
   selects: string[],
@@ -235,10 +281,9 @@ export function projectDocument(
     return doc;
   }
 
-  const parsed = selects.map(parseSelectExpression);
-  const hasWildcard = parsed.some((p) => p.wildcard && !p.exclude);
-  const inclusions = parsed.filter((p) => !p.exclude && !p.wildcard);
-  const exclusions = parsed.filter((p) => p.exclude);
+  // Use compiled projection plan to bypass redundant parsing/grouping
+  const plan = getProjectionPlan(selects);
+  const { hasWildcard, byTopLevel, exclusions } = plan;
 
   let result: Record<string, unknown>;
 
@@ -248,18 +293,6 @@ export function projectDocument(
   } else {
     // Start with empty, add inclusions
     result = {};
-
-    // Group inclusions by top-level field for efficient array handling
-    const byTopLevel = new Map<string, string[][]>();
-
-    for (const incl of inclusions) {
-      if (incl.path.length === 0) continue;
-      const top = incl.path[0];
-      if (!byTopLevel.has(top)) {
-        byTopLevel.set(top, []);
-      }
-      byTopLevel.get(top)!.push(incl.path.slice(1));
-    }
 
     for (const [topField, subPaths] of byTopLevel) {
       const value = doc[topField];

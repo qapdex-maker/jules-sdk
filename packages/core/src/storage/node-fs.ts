@@ -19,6 +19,7 @@ import { createReadStream, createWriteStream, WriteStream } from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
 import { Activity, SessionResource } from '../types.js';
+import { validateSessionId } from '../utils/validators.js';
 import {
   ActivityStorage,
   SessionStorage,
@@ -46,7 +47,9 @@ export class NodeFileStorage implements ActivityStorage {
   private currentFileSize = 0;
 
   constructor(sessionId: string, rootDir: string) {
-    const sessionCacheDir = path.resolve(rootDir, '.jules/cache', sessionId);
+    validateSessionId(sessionId);
+    const cleanId = sessionId.replace(/^sessions\//, '');
+    const sessionCacheDir = path.resolve(rootDir, '.jules/cache', cleanId);
     this.filePath = path.join(sessionCacheDir, 'activities.jsonl');
     this.metadataPath = path.join(sessionCacheDir, 'metadata.json');
   }
@@ -426,7 +429,9 @@ export class NodeSessionStorage implements SessionStorage {
   }
 
   private getSessionPath(sessionId: string): string {
-    return path.join(this.cacheDir, sessionId, 'session.json');
+    validateSessionId(sessionId);
+    const cleanId = sessionId.replace(/^sessions\//, '');
+    return path.join(this.cacheDir, cleanId, 'session.json');
   }
 
   async upsert(session: SessionResource): Promise<void> {
@@ -483,9 +488,11 @@ export class NodeSessionStorage implements SessionStorage {
   }
 
   async delete(sessionId: string): Promise<void> {
+    validateSessionId(sessionId);
     await this.init();
     // 1. Remove the directory (Metadata + Activities + Artifacts)
-    const sessionDir = path.join(this.cacheDir, sessionId);
+    const cleanId = sessionId.replace(/^sessions\//, '');
+    const sessionDir = path.join(this.cacheDir, cleanId);
     await fs.rm(sessionDir, { recursive: true, force: true });
 
     // 2. We do NOT rewrite the index here for performance.

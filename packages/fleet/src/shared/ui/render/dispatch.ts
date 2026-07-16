@@ -14,10 +14,13 @@
 
 import type { DispatchEvent } from '../../events/dispatch.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl } from '../session-url.js';
+import { sessionUrl, ansiLink } from '../session-url.js';
 
 /** Render a dispatch-domain event. */
-export function renderDispatchEvent(event: DispatchEvent, ctx: RenderContext): void {
+export function renderDispatchEvent(
+  event: DispatchEvent,
+  ctx: RenderContext,
+): void {
   switch (event.type) {
     case 'dispatch:start':
       ctx.info(`Dispatching from milestone ${event.milestone}`);
@@ -33,7 +36,9 @@ export function renderDispatchEvent(event: DispatchEvent, ctx: RenderContext): v
       break;
     case 'dispatch:issue:dispatched':
       ctx.stopSpinner(`#${event.number} → session ${event.sessionId}`);
-      ctx.info(`  ${sessionUrl(event.sessionId)}`);
+      ctx.info(
+        `  ${ansiLink(sessionUrl(event.sessionId), sessionUrl(event.sessionId))}`,
+      );
       break;
     case 'dispatch:issue:skipped':
       ctx.warn(`  ⊘ #${event.number}: ${event.reason}`);

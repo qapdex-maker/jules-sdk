@@ -1,3 +1,8 @@
+## 2026-07-17 - Repository Validation Pattern to Prevent Injection and Traversal
+**Vulnerability:** The reconciliation handlers accepted untrusted `repo` string inputs (such as `owner/repo`) and parsed them directly (e.g., using `.split('/')`) without verification, opening potential vectors for path traversal, control character injection, or API parsing attacks when interacting with downstream filesystems and Octokit.
+**Learning:** Repository path structures must be strictly validated before processing or accessing external APIs. An simple/anchored regex match against standard naming formats prevents any injection or path traversal attempts.
+**Prevention:** Always validate repository name parameters against standard patterns (like strictly alphanumeric, dots, hyphens, and underscores) and reject control characters, path traversal segments (`..`), or invalid slash counts.
+
 ## 2026-07-16 - Path Traversal Vulnerability via Session ID Input
 **Vulnerability:** The client session initialization and local cache file storage used user-supplied or untrusted `sessionId` inputs directly to resolve cache directories, which allowed directory traversal and file inclusion when malicious IDs containing path traversal characters like `..`, `/`, or `\\` were provided.
 **Learning:** Session IDs must be rigorously validated before performing any disk I/O, as they are implicitly used as subdirectory names in local cache structures. By enforcing flat, alphanumeric string constraints (no directory separators or control characters), path traversal is completely eliminated.

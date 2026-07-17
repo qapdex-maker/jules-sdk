@@ -170,6 +170,52 @@ describe('critical-paths', () => {
     );
   });
 
+  // ─── Repository Validation Tests ─────────────────────────────
+
+  it('accepts valid repository names', async () => {
+    const { validateRepository } = await import('../../shared/validators.js');
+    expect(() => validateRepository('owner/repo')).not.toThrow();
+    expect(() => validateRepository('google/jules-sdk')).not.toThrow();
+    expect(() => validateRepository('owner-name/repo_name.js')).not.toThrow();
+  });
+
+  it('rejects empty or missing repository names', async () => {
+    const { validateRepository } = await import('../../shared/validators.js');
+    expect(() => validateRepository('')).toThrow('INVALID_REPOSITORY');
+  });
+
+  it('rejects invalid repository formats (no slash or too many slashes)', async () => {
+    const { validateRepository } = await import('../../shared/validators.js');
+    expect(() => validateRepository('owner')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner/repo/extra')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner//repo')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('/owner/repo')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner/repo/')).toThrow('INVALID_REPOSITORY');
+  });
+
+  it('rejects repository names with invalid special characters', async () => {
+    const { validateRepository } = await import('../../shared/validators.js');
+    expect(() => validateRepository('owner$/repo')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner/re@po')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner:/repo')).toThrow('INVALID_REPOSITORY');
+  });
+
+  it('rejects repository names with control characters', async () => {
+    const { validateRepository } = await import('../../shared/validators.js');
+    expect(() => validateRepository('owner\x00/repo')).toThrow('CONTROL_CHAR');
+    expect(() => validateRepository('owner/re\x1fpo')).toThrow('CONTROL_CHAR');
+  });
+
+  it('rejects repository names with path traversal', async () => {
+    const { validateRepository } = await import('../../shared/validators.js');
+    expect(() => validateRepository('../repo')).toThrow('PATH_TRAVERSAL');
+    expect(() => validateRepository('owner/..')).toThrow('PATH_TRAVERSAL');
+    expect(() => validateRepository('../owner/repo')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner/../repo')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('./repo')).toThrow('PATH_TRAVERSAL');
+    expect(() => validateRepository('owner/.')).toThrow('PATH_TRAVERSAL');
+  });
+
   // ─── 4. dry-run behavior ──────────────────────────────────────
 
   it('stage-resolution --dry-run does not modify manifest', async () => {

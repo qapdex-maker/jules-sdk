@@ -237,6 +237,7 @@ export interface ProjectionPlan {
   hasWildcard: boolean;
   byTopLevel: Map<string, string[][]>;
   exclusions: SelectExpression[];
+  isSimpleTopLevel?: boolean;
 }
 
 const projectionPlanCache = new Map<string, ProjectionPlan>();
@@ -254,6 +255,13 @@ export function getProjectionPlan(selects: string[]): ProjectionPlan {
     const inclusions = parsed.filter((p) => !p.exclude && !p.wildcard);
     const exclusions = parsed.filter((p) => p.exclude);
 
+    // Fast-path detection: Check if the projection consists entirely of
+    // simple top-level fields with no wildcards and no exclusions.
+    const isSimpleTopLevel =
+      !hasWildcard &&
+      exclusions.length === 0 &&
+      inclusions.every((incl) => incl.path.length === 1);
+
     const byTopLevel = new Map<string, string[][]>();
     for (const incl of inclusions) {
       if (incl.path.length === 0) continue;
@@ -266,7 +274,7 @@ export function getProjectionPlan(selects: string[]): ProjectionPlan {
       subPaths.push(incl.path.slice(1));
     }
 
-    plan = { hasWildcard, byTopLevel, exclusions };
+    plan = { hasWildcard, byTopLevel, exclusions, isSimpleTopLevel };
     projectionPlanCache.set(cacheKey, plan);
   }
   return plan;
@@ -283,7 +291,24 @@ export function projectDocument(
 
   // Use compiled projection plan to bypass redundant parsing/grouping
   const plan = getProjectionPlan(selects);
-  const { hasWildcard, byTopLevel, exclusions } = plan;
+  const { hasWildcard, byTopLevel, exclusions, isSimpleTopLevel } = plan;
+
+  // Fast-path: Optimized top-level field selection.
+  // Avoids sub-path checks, array and type detection, and recursive projection.
+  // Directly clones objects/arrays and copies primitives by reference.
+  if (isSimpleTopLevel) {
+    const result: Record<string, unknown> = {};
+    for (const topField of byTopLevel.keys()) {
+      const value = doc[topField];
+      if (value !== undefined) {
+        result[topField] =
+          value === null || typeof value !== 'object'
+            ? value
+            : deepClone(value);
+      }
+    }
+    return result;
+  }
 
   let result: Record<string, unknown>;
 

@@ -105,7 +105,9 @@ function matchPath(
 }
 
 /**
- * Match a document against a full where clause with dot notation support
+ * Match a document against a full where clause with dot notation support.
+ * Uses a standard for...in loop with hasOwnProperty instead of Object.entries
+ * to avoid allocating entry arrays on every single document matching call.
  */
 function matchWhere(
   doc: unknown,
@@ -113,14 +115,17 @@ function matchWhere(
 ): boolean {
   if (!where) return true;
 
-  for (const [key, filter] of Object.entries(where)) {
-    if (isDotPath(key)) {
-      // Use path-based matching
-      if (!matchPath(doc, key, filter)) return false;
-    } else {
-      // Use direct field matching
-      const value = (doc as Record<string, unknown>)[key];
-      if (!match(value, filter)) return false;
+  for (const key in where) {
+    if (Object.prototype.hasOwnProperty.call(where, key)) {
+      const filter = where[key];
+      if (isDotPath(key)) {
+        // Use path-based matching
+        if (!matchPath(doc, key, filter)) return false;
+      } else {
+        // Use direct field matching
+        const value = (doc as Record<string, unknown>)[key];
+        if (!match(value, filter)) return false;
+      }
     }
   }
 
@@ -244,20 +249,29 @@ export async function select<T extends JulesDomain>(
           'sessions',
         );
 
-        // Preserve sorting metadata from original document
+        // Preserve sorting metadata from original document.
+        // Pre-parse the Date string to an O(1) number to avoid costly allocations during sorting.
         const resourceRecord = cached.resource as unknown as Record<
           string,
           unknown
         >;
+        const createTimeStr = (resourceRecord.createTime ?? item.createTime ?? '') as string;
         item._sortKey = {
           createTime: resourceRecord.createTime,
-          id: resourceRecord.id,
+          time: createTimeStr ? new Date(createTimeStr).getTime() : 0,
+          id: resourceRecord.id ?? item.id,
         };
 
         results.push(item);
       }
       chunk = [];
     };
+
+    // Pre-calculate lower-case search query outside of the loop to avoid redundant conversions
+    const searchLower =
+      typeof where?.search === 'string'
+        ? (where.search as string).toLowerCase()
+        : undefined;
 
     // PASS 1: Index Scan (Metadata Only)
     for await (const entry of storage.scanIndex()) {
@@ -271,8 +285,8 @@ export async function select<T extends JulesDomain>(
       if (where?.title && !match(entry.title, where.title)) continue;
       // Global Search
       if (
-        where?.search &&
-        !entry.title.toLowerCase().includes(where.search.toLowerCase())
+        searchLower &&
+        !entry.title.toLowerCase().includes(searchLower)
       )
         continue;
 
@@ -410,11 +424,14 @@ export async function select<T extends JulesDomain>(
             'activities',
           );
 
-          // Preserve sorting metadata from original document
+          // Preserve sorting metadata from original document.
+          // Pre-parse the Date string to an O(1) number to avoid costly allocations during sorting.
           const actRecord = act as unknown as Record<string, unknown>;
+          const createTimeStr = (actRecord.createTime ?? item.createTime ?? '') as string;
           item._sortKey = {
             createTime: actRecord.createTime,
-            id: actRecord.id,
+            time: createTimeStr ? new Date(createTimeStr).getTime() : 0,
+            id: actRecord.id ?? item.id,
           };
 
           // PASS 2: Reverse Join (Include Session Metadata)
@@ -449,21 +466,24 @@ export async function select<T extends JulesDomain>(
     }
   }
 
-  // Sorting - use _sortKey if available, fallback to document fields
+  // Sorting - use precomputed time/id inside _sortKey if available, fallback to document fields
   const order = query.order ?? 'desc';
   results.sort((a, b) => {
     const sortKeyA = a._sortKey as
-      | { createTime: string; id: string }
+      | { createTime?: string; time: number; id: string }
       | undefined;
     const sortKeyB = b._sortKey as
-      | { createTime: string; id: string }
+      | { createTime?: string; time: number; id: string }
       | undefined;
-    const timeA = new Date(
-      (sortKeyA?.createTime ?? a.createTime) as string,
-    ).getTime();
-    const timeB = new Date(
-      (sortKeyB?.createTime ?? b.createTime) as string,
-    ).getTime();
+
+    // In case _sortKey is missing (fallback), parse Date on the fly
+    const timeA = sortKeyA
+      ? sortKeyA.time
+      : new Date((a.createTime ?? 0) as string).getTime();
+    const timeB = sortKeyB
+      ? sortKeyB.time
+      : new Date((b.createTime ?? 0) as string).getTime();
+
     const idA = (sortKeyA?.id ?? a.id) as string;
     const idB = (sortKeyB?.id ?? b.id) as string;
     if (timeA !== timeB) {

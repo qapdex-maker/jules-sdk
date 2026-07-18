@@ -13,7 +13,16 @@
 // limitations under the License.
 
 import { describe, it, expect } from 'vitest';
-import { sessionUrl } from '../shared/ui/session-url.js';
+import { sessionUrl, ansiLink } from '../shared/ui/session-url.js';
+
+describe('ansiLink', () => {
+  it('wraps text with OSC 8 escape sequences', () => {
+    const link = ansiLink('click here', 'https://jules.google.com');
+    expect(link).toBe(
+      '\x1b]8;;https://jules.google.com\x07click here\x1b]8;;\x07',
+    );
+  });
+});
 
 describe('sessionUrl', () => {
   it('uses /session/ (singular) in the URL', () => {
@@ -28,21 +37,24 @@ describe('dispatch comment session regex', () => {
   const regex = /Session:\s*\[?`([^`]+)`\]?/;
 
   it('parses old format: Session: `id`', () => {
-    const body = '🤖 **Fleet Dispatch Event**\nSession: `abc123`\nTimestamp: 2026-01-01';
+    const body =
+      '🤖 **Fleet Dispatch Event**\nSession: `abc123`\nTimestamp: 2026-01-01';
     const match = body.match(regex);
     expect(match).not.toBeNull();
     expect(match![1]).toBe('abc123');
   });
 
   it('parses new format: Session: [`id`](url)', () => {
-    const body = '🤖 **Fleet Dispatch Event**\nSession: [`abc123`](https://jules.google.com/session/abc123)\nTimestamp: Mar 3, 2026';
+    const body =
+      '🤖 **Fleet Dispatch Event**\nSession: [`abc123`](https://jules.google.com/session/abc123)\nTimestamp: Mar 3, 2026';
     const match = body.match(regex);
     expect(match).not.toBeNull();
     expect(match![1]).toBe('abc123');
   });
 
   it('handles numeric session IDs', () => {
-    const body = 'Session: [`17338656567244366276`](https://jules.google.com/session/17338656567244366276)';
+    const body =
+      'Session: [`17338656567244366276`](https://jules.google.com/session/17338656567244366276)';
     const match = body.match(regex);
     expect(match).not.toBeNull();
     expect(match![1]).toBe('17338656567244366276');

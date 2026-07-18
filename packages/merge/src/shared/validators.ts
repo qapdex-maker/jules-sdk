@@ -28,6 +28,50 @@ export function validateFilePath(filePath: string): void {
   }
 }
 
+export function validateRepository(repo: string): void {
+  if (!repo) {
+    throw new Error('INVALID_REPOSITORY: Repository cannot be empty');
+  }
+
+  if (repo.includes('\x00') || /[\x01-\x1f\x7f]/.test(repo)) {
+    throw new Error(
+      `CONTROL_CHAR: Repository contains control characters: ${repo}`,
+    );
+  }
+
+  const parts = repo.split('/');
+  if (parts.length !== 2) {
+    throw new Error(
+      `INVALID_REPOSITORY: Repository must be in owner/repo format: ${repo}`,
+    );
+  }
+
+  const [owner, repoName] = parts;
+  if (!owner || !repoName) {
+    throw new Error(
+      `INVALID_REPOSITORY: Repository must be in owner/repo format: ${repo}`,
+    );
+  }
+
+  const validNameRegex = /^[a-zA-Z0-9-._]+$/;
+  if (!validNameRegex.test(owner) || !validNameRegex.test(repoName)) {
+    throw new Error(
+      `INVALID_REPOSITORY: Repository name contains invalid characters: ${repo}`,
+    );
+  }
+
+  if (
+    owner === '.' ||
+    owner === '..' ||
+    repoName === '.' ||
+    repoName === '..'
+  ) {
+    throw new Error(
+      `PATH_TRAVERSAL: Repository name cannot contain path traversal segments: ${repo}`,
+    );
+  }
+}
+
 export function validateBranchName(branch: string): void {
   if (branch.startsWith('refs/')) {
     throw new Error(

@@ -30,8 +30,12 @@ export function repoConfigUrl(owner: string, repo: string): string {
 
 /**
  * Wrap text in an ANSI hyperlink (OSC 8) for terminals that support it.
- * Falls back to plain text in terminals that don't.
+ * Falls back to plain text in terminals that don't (e.g. non-TTY or CI).
  */
 export function ansiLink(text: string, url: string): string {
+  const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
+  if (!isInteractive) {
+    return text === url ? url : `${text} (${url})`;
+  }
   return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
 }

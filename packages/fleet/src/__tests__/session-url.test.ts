@@ -12,15 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { sessionUrl, ansiLink } from '../shared/ui/session-url.js';
 
 describe('ansiLink', () => {
-  it('wraps text with OSC 8 escape sequences', () => {
+  const originalEnvCI = process.env.CI;
+  const originalIsTTY = process.stdout.isTTY;
+
+  afterEach(() => {
+    process.env.CI = originalEnvCI;
+    process.stdout.isTTY = originalIsTTY;
+  });
+
+  it('wraps text with OSC 8 escape sequences in interactive/TTY environment', () => {
+    delete process.env.CI;
+    process.stdout.isTTY = true;
+
     const link = ansiLink('click here', 'https://jules.google.com');
     expect(link).toBe(
       '\x1b]8;;https://jules.google.com\x07click here\x1b]8;;\x07',
     );
+  });
+
+  it('falls back to plain format when not in an interactive/TTY environment', () => {
+    delete process.env.CI;
+    process.stdout.isTTY = false;
+
+    const link = ansiLink('click here', 'https://jules.google.com');
+    expect(link).toBe('click here (https://jules.google.com)');
+
+    const sameLink = ansiLink('https://jules.google.com', 'https://jules.google.com');
+    expect(sameLink).toBe('https://jules.google.com');
+  });
+
+  it('falls back to plain format when process.env.CI is true even if TTY is true', () => {
+    process.env.CI = 'true';
+    process.stdout.isTTY = true;
+
+    const link = ansiLink('click here', 'https://jules.google.com');
+    expect(link).toBe('click here (https://jules.google.com)');
   });
 });
 

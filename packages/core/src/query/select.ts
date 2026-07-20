@@ -255,10 +255,12 @@ export async function select<T extends JulesDomain>(
           string,
           unknown
         >;
-        const createTimeStr = (resourceRecord.createTime ?? item.createTime ?? '') as string;
+        const createTimeStr = (resourceRecord.createTime ??
+          item.createTime ??
+          '') as string;
         item._sortKey = {
           createTime: resourceRecord.createTime,
-          time: createTimeStr ? new Date(createTimeStr).getTime() : 0,
+          time: createTimeStr ? Date.parse(createTimeStr) : 0,
           id: resourceRecord.id ?? item.id,
         };
 
@@ -284,10 +286,7 @@ export async function select<T extends JulesDomain>(
       // Filter by Title (Fuzzy Search or specific title)
       if (where?.title && !match(entry.title, where.title)) continue;
       // Global Search
-      if (
-        searchLower &&
-        !entry.title.toLowerCase().includes(searchLower)
-      )
+      if (searchLower && !entry.title.toLowerCase().includes(searchLower))
         continue;
 
       chunk.push(entry);
@@ -427,10 +426,12 @@ export async function select<T extends JulesDomain>(
           // Preserve sorting metadata from original document.
           // Pre-parse the Date string to an O(1) number to avoid costly allocations during sorting.
           const actRecord = act as unknown as Record<string, unknown>;
-          const createTimeStr = (actRecord.createTime ?? item.createTime ?? '') as string;
+          const createTimeStr = (actRecord.createTime ??
+            item.createTime ??
+            '') as string;
           item._sortKey = {
             createTime: actRecord.createTime,
-            time: createTimeStr ? new Date(createTimeStr).getTime() : 0,
+            time: createTimeStr ? Date.parse(createTimeStr) : 0,
             id: actRecord.id ?? item.id,
           };
 
@@ -479,10 +480,14 @@ export async function select<T extends JulesDomain>(
     // In case _sortKey is missing (fallback), parse Date on the fly
     const timeA = sortKeyA
       ? sortKeyA.time
-      : new Date((a.createTime ?? 0) as string).getTime();
+      : a.createTime
+        ? Date.parse(a.createTime as string)
+        : 0;
     const timeB = sortKeyB
       ? sortKeyB.time
-      : new Date((b.createTime ?? 0) as string).getTime();
+      : b.createTime
+        ? Date.parse(b.createTime as string)
+        : 0;
 
     const idA = (sortKeyA?.id ?? a.id) as string;
     const idB = (sortKeyB?.id ?? b.id) as string;

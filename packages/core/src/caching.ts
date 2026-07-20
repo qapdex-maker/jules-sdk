@@ -34,7 +34,7 @@ export function determineCacheTier(
   cached: CachedSession,
   now: number = Date.now(),
 ): CacheTier {
-  const createdAt = new Date(cached.resource.createTime).getTime();
+  const createdAt = Date.parse(cached.resource.createTime);
   const age = now - createdAt;
   const isTerminal = ['failed', 'completed'].includes(cached.resource.state);
 

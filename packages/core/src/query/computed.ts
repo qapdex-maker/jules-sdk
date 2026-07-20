@@ -76,8 +76,8 @@ export function computeDurationMs(session: {
 }): number {
   if (!session.createTime || !session.updateTime) return 0;
 
-  const created = new Date(session.createTime).getTime();
-  const updated = new Date(session.updateTime).getTime();
+  const created = Date.parse(session.createTime);
+  const updated = Date.parse(session.updateTime);
 
   if (isNaN(created) || isNaN(updated)) return 0;
 
@@ -110,7 +110,10 @@ export function injectActivityComputedFields(
   // Check if they are already present to avoid redundant computation and cloning
   const hasArtifactCount = 'artifactCount' in activity;
   const hasSummary = 'summary' in activity;
-  if ((!needsArtifactCount || hasArtifactCount) && (!needsSummary || hasSummary)) {
+  if (
+    (!needsArtifactCount || hasArtifactCount) &&
+    (!needsSummary || hasSummary)
+  ) {
     return activity;
   }
 

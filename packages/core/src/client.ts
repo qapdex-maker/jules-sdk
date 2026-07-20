@@ -358,13 +358,19 @@ export class JulesClientImpl implements JulesClient {
   }
 
   private async _getHighWaterMark(): Promise<Date | null> {
-    let newest: Date | null = null;
+    let newestMs = 0;
+    let newestStr: string | null = null;
     // scanIndex is the high-speed index scanner implemented in Phase 1
     for await (const entry of this.storage.scanIndex()) {
-      const date = new Date(entry.createTime);
-      if (!newest || date > newest) newest = date;
+      if (entry.createTime) {
+        const ms = Date.parse(entry.createTime);
+        if (ms > newestMs) {
+          newestMs = ms;
+          newestStr = entry.createTime;
+        }
+      }
     }
-    return newest;
+    return newestStr ? new Date(newestStr) : null;
   }
 
   /**

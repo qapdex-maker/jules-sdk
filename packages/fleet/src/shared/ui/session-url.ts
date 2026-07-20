@@ -37,5 +37,8 @@ export function ansiLink(text: string, url: string): string {
   if (!isInteractive) {
     return text === url ? url : `${text} (${url})`;
   }
-  return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
+  // Underline (\x1b[4m) and color the link cyan (\x1b[36m) to make terminal hyperlinks visually discoverable as clickable elements.
+  // Reset underline (\x1b[24m) and color (\x1b[39m) inside the OSC 8 markers.
+  const styledText = `\x1b[36m\x1b[4m${text}\x1b[24m\x1b[39m`;
+  return `\x1b]8;;${url}\x07${styledText}\x1b]8;;\x07`;
 }

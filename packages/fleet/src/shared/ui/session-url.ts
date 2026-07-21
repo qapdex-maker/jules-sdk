@@ -31,11 +31,16 @@ export function repoConfigUrl(owner: string, repo: string): string {
 /**
  * Wrap text in an ANSI hyperlink (OSC 8) for terminals that support it.
  * Falls back to plain text in terminals that don't (e.g. non-TTY or CI).
+ *
+ * Visually styles the link text with a cyan color and underline in interactive
+ * TTY environments to make it highly discoverable and user-friendly.
  */
 export function ansiLink(text: string, url: string): string {
   const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
   if (!isInteractive) {
     return text === url ? url : `${text} (${url})`;
   }
-  return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
+  // \x1b[36m = Cyan color, \x1b[4m = Underline
+  // \x1b[24m = Underline off, \x1b[39m = Default color
+  return `\x1b]8;;${url}\x07\x1b[36m\x1b[4m${text}\x1b[24m\x1b[39m\x1b]8;;\x07`;
 }

@@ -237,19 +237,21 @@ export async function getLatestActivities(
       const chunkLines = combined.split('\n');
       tail = chunkLines.shift() || '';
 
+      // Iterate backwards through the lines in this chunk.
+      // Since we read the file backwards from the end, accumulating with push()
+      // naturally yields a newest-first order. This avoids O(N^2) unshifting overhead.
       for (let i = chunkLines.length - 1; i >= 0; i--) {
         if (chunkLines[i] && lines.length < n) {
-          lines.unshift(chunkLines[i]);
+          lines.push(chunkLines[i]);
         }
       }
     }
 
     if (lines.length < n && tail) {
-      lines.unshift(tail);
+      lines.push(tail);
     }
 
-    const finalLines = lines.slice(-n).reverse();
-    return finalLines.map((line) => JSON.parse(line));
+    return lines.map((line) => JSON.parse(line));
   } catch (e: any) {
     if (e.code === 'ENOENT') return [];
     throw e;

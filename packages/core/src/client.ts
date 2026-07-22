@@ -16,7 +16,7 @@
 
 // src/client.ts
 import { ApiClient } from './api.js';
-import { validateSessionId } from './utils/validators.js';
+import { validateSessionId, validateRepository, validateBranchName } from './utils/validators.js';
 import { createSourceManager } from './sources.js';
 import { join } from 'node:path';
 import { getRootDir } from './storage/root.js';
@@ -501,6 +501,9 @@ export class JulesClientImpl implements JulesClient {
         title: config.title,
       };
     }
+
+    validateRepository(config.source.github);
+    validateBranchName(config.source.baseBranch);
 
     const source = await this.sources.get({ github: config.source.github });
     if (!source) {

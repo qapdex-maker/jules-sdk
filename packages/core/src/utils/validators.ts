@@ -50,3 +50,94 @@ export function validateSessionId(sessionId: string): void {
     );
   }
 }
+
+/**
+ * Validates a given GitHub repository string to prevent injection and traversal
+ * when interacting with downstream filesystems and APIs.
+ *
+ * @param repo - The repository string (owner/repo).
+ * @throws {Error} If the repository name is invalid.
+ */
+export function validateRepository(repo: string): void {
+  if (!repo) {
+    throw new Error('INVALID_REPOSITORY: Repository cannot be empty');
+  }
+
+  if (repo.includes('\x00') || /[\x01-\x1f\x7f]/.test(repo)) {
+    throw new Error(
+      `CONTROL_CHAR: Repository contains control characters: ${repo}`,
+    );
+  }
+
+  const parts = repo.split('/');
+  if (parts.length !== 2) {
+    throw new Error(
+      `INVALID_REPOSITORY: Repository must be in owner/repo format: ${repo}`,
+    );
+  }
+
+  const [owner, repoName] = parts;
+  if (!owner || !repoName) {
+    throw new Error(
+      `INVALID_REPOSITORY: Repository must be in owner/repo format: ${repo}`,
+    );
+  }
+
+  const validNameRegex = /^[a-zA-Z0-9-._]+$/;
+  if (!validNameRegex.test(owner) || !validNameRegex.test(repoName)) {
+    throw new Error(
+      `INVALID_REPOSITORY: Repository name contains invalid characters: ${repo}`,
+    );
+  }
+
+  if (
+    owner === '.' ||
+    owner === '..' ||
+    repoName === '.' ||
+    repoName === '..'
+  ) {
+    throw new Error(
+      `PATH_TRAVERSAL: Repository name cannot contain path traversal segments: ${repo}`,
+    );
+  }
+}
+
+/**
+ * Validates a given Git branch name to ensure it conforms to security-safe
+ * git reference naming rules and avoids script injection or command execution risks.
+ *
+ * @param branch - The branch name to validate.
+ * @throws {Error} If the branch name is invalid.
+ */
+export function validateBranchName(branch: string): void {
+  if (!branch) {
+    throw new Error('INVALID_BRANCH: Branch name cannot be empty');
+  }
+  if (branch.startsWith('refs/')) {
+    throw new Error(
+      `RESERVED_BRANCH: Branch name must not start with refs/: ${branch}`,
+    );
+  }
+  // git ref rules: no spaces, no control chars, no consecutive dots, no trailing dot/slash/lock
+  if (/\s/.test(branch)) {
+    throw new Error(`INVALID_BRANCH: Branch name contains spaces: ${branch}`);
+  }
+  if (/[\x00-\x1f\x7f~^:?*\[\\]/.test(branch)) {
+    throw new Error(
+      `INVALID_BRANCH: Branch name contains invalid characters: ${branch}`,
+    );
+  }
+  if (/\.\./.test(branch)) {
+    throw new Error(
+      `INVALID_BRANCH: Branch name contains consecutive dots: ${branch}`,
+    );
+  }
+  if (/\.$/.test(branch) || /\/$/.test(branch)) {
+    throw new Error(
+      `INVALID_BRANCH: Branch name ends with dot or slash: ${branch}`,
+    );
+  }
+  if (/\.lock$/.test(branch)) {
+    throw new Error(`INVALID_BRANCH: Branch name ends with .lock: ${branch}`);
+  }
+}

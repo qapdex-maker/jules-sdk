@@ -1,3 +1,8 @@
+## 2026-07-18 - Input Validation of Repository and Branch Names on SDK/MCP Entrypoints
+**Vulnerability:** The Core SDK and MCP entrypoints allowed arbitrary strings to be used for repository references and Git branch names during session creation and resource fetches, presenting opportunities for path traversal, script injection, and reference escape down the call chain.
+**Learning:** Validating input format at the highest level of the SDK ensures consistent security boundaries across all integration endpoints (including CLI, direct client usage, and MCP tools) before operations resolve URLs or format API payloads.
+**Prevention:** Integrate robust `validateRepository` and `validateBranchName` checks on all entrypoints receiving user-supplied source contexts.
+
 ## 2026-07-17 - Repository Validation Pattern to Prevent Injection and Traversal
 **Vulnerability:** The reconciliation handlers accepted untrusted `repo` string inputs (such as `owner/repo`) and parsed them directly (e.g., using `.split('/')`) without verification, opening potential vectors for path traversal, control character injection, or API parsing attacks when interacting with downstream filesystems and Octokit.
 **Learning:** Repository path structures must be strictly validated before processing or accessing external APIs. An simple/anchored regex match against standard naming formats prevents any injection or path traversal attempts.

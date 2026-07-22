@@ -30,7 +30,7 @@ describe('ansiLink', () => {
 
     const link = ansiLink('click here', 'https://jules.google.com');
     expect(link).toBe(
-      '\x1b]8;;https://jules.google.com\x07click here\x1b]8;;\x07',
+      '\x1b]8;;https://jules.google.com\x07\x1b[36m\x1b[4mclick here\x1b[24m\x1b[39m\x1b]8;;\x07',
     );
   });
 

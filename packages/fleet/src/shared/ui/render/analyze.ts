@@ -48,7 +48,7 @@ export function renderAnalyzeEvent(
       break;
     case 'analyze:session:started':
       ctx.stopSpinner(`Session started: ${event.id}`);
-      ctx.info(`  ${ansiLink(sessionUrl(event.id), sessionUrl(event.id))}`);
+      ctx.info(`  ${ansiLink('View Session', sessionUrl(event.id))}`);
       break;
     case 'analyze:session:failed':
       ctx.stopSpinner();

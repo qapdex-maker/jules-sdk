@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  MediaArtifact,
-  ChangeSetArtifact,
-} from '../artifacts.js';
+import { MediaArtifact, ChangeSetArtifact } from '../artifacts.js';
 import { Activity, Artifact } from '../types.js';
 import { ActivityStorage } from '../storage/types.js';
 import { ActivityClient, ListOptions, SelectOptions } from './types.js';
@@ -235,15 +232,13 @@ export class DefaultActivityClient implements ActivityClient {
     const latest = await this.storage.latest();
     // We use createTime as the primary cursor because it's standard and comparable.
     // Fallback to epoch 0 if storage is empty.
-    let highWaterMark = latest?.createTime
-      ? new Date(latest.createTime).getTime()
-      : 0;
+    let highWaterMark = latest?.createTime ? Date.parse(latest.createTime) : 0;
     // We also track the specific ID of the latest to handle events with identical timestamps.
     let lastSeenId = latest?.id;
 
     // 2. Start crude polling from the raw network source
     for await (const activity of this.network.rawStream()) {
-      const actTime = new Date(activity.createTime).getTime();
+      const actTime = Date.parse(activity.createTime);
 
       // 3. Deduplication Filter
       // If this activity is older than our high-water mark, skip it.

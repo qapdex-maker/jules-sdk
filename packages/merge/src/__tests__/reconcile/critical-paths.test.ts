@@ -156,6 +156,11 @@ describe('critical-paths', () => {
     expect(() => validateFilePath('src/foo\x00.ts')).toThrow('CONTROL_CHAR');
   });
 
+  it('rejects empty or missing branch names', async () => {
+    const { validateBranchName } = await import('../../shared/validators.js');
+    expect(() => validateBranchName('')).toThrow('INVALID_BRANCH');
+  });
+
   it('rejects branch names starting with refs/', async () => {
     const { validateBranchName } = await import('../../shared/validators.js');
     expect(() => validateBranchName('refs/heads/main')).toThrow(
@@ -168,6 +173,11 @@ describe('critical-paths', () => {
     expect(() => validateBranchName('my-branch.lock')).toThrow(
       'INVALID_BRANCH',
     );
+  });
+
+  it('rejects empty or missing file paths', async () => {
+    const { validateFilePath } = await import('../../shared/validators.js');
+    expect(() => validateFilePath('')).toThrow('INVALID_FILE_PATH');
   });
 
   // ─── Repository Validation Tests ─────────────────────────────

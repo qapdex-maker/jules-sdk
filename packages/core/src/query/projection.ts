@@ -77,23 +77,29 @@ export function parseSelectExpression(expr: string): SelectExpression {
  * - getPath({a: {b: 1}}, ["a", "b"]) → 1
  * - getPath({items: [{x: 1}, {x: 2}]}, ["items", "x"]) → [1, 2]
  */
-export function getPath(obj: unknown, path: string[]): unknown {
-  if (path.length === 0) return obj;
+export function getPath(obj: unknown, path: string[], index = 0): unknown {
+  if (index >= path.length) return obj;
   if (obj === null || obj === undefined) return undefined;
 
-  const [head, ...tail] = path;
+  const head = path[index];
 
   if (Array.isArray(obj)) {
-    // Map over array elements and collect values
-    const results = obj
-      .map((item) => getPath(item, path))
-      .filter((v) => v !== undefined);
+    // Map over array elements and collect values using a standard indexed loop
+    // to avoid closure creation and array allocations from map/filter.
+    const results: unknown[] = [];
+    const len = obj.length;
+    for (let i = 0; i < len; i++) {
+      const v = getPath(obj[i], path, index);
+      if (v !== undefined) {
+        results.push(v);
+      }
+    }
     return results.length > 0 ? results : undefined;
   }
 
   if (typeof obj === 'object') {
     const value = (obj as Record<string, unknown>)[head];
-    return getPath(value, tail);
+    return getPath(value, path, index + 1);
   }
 
   return undefined;
@@ -108,12 +114,13 @@ export function setPath(
   obj: Record<string, unknown>,
   path: string[],
   value: unknown,
+  index = 0,
 ): void {
-  if (path.length === 0 || value === undefined) return;
+  if (index >= path.length || value === undefined) return;
 
-  const [head, ...tail] = path;
+  const head = path[index];
 
-  if (tail.length === 0) {
+  if (index === path.length - 1) {
     obj[head] = value;
     return;
   }
@@ -124,7 +131,7 @@ export function setPath(
 
   const next = obj[head];
   if (typeof next === 'object' && next !== null && !Array.isArray(next)) {
-    setPath(next as Record<string, unknown>, tail, value);
+    setPath(next as Record<string, unknown>, path, value, index + 1);
   }
 }
 
@@ -133,26 +140,29 @@ export function setPath(
  *
  * For paths ending in array elements, removes the field from each element.
  */
-export function deletePath(obj: unknown, path: string[]): void {
-  if (path.length === 0 || obj === null || obj === undefined) return;
+export function deletePath(obj: unknown, path: string[], index = 0): void {
+  if (index >= path.length || obj === null || obj === undefined) return;
 
   if (Array.isArray(obj)) {
-    obj.forEach((item) => deletePath(item, path));
+    const len = obj.length;
+    for (let i = 0; i < len; i++) {
+      deletePath(obj[i], path, index);
+    }
     return;
   }
 
   if (typeof obj !== 'object') return;
 
   const record = obj as Record<string, unknown>;
-  const [head, ...tail] = path;
+  const head = path[index];
 
-  if (tail.length === 0) {
+  if (index === path.length - 1) {
     delete record[head];
     return;
   }
 
   if (head in record) {
-    deletePath(record[head], tail);
+    deletePath(record[head], path, index + 1);
   }
 }
 
@@ -195,12 +205,21 @@ function projectArray(
   subPaths: string[][],
   excludePaths: string[][],
 ): unknown[] {
-  return arr.map((item) => {
-    if (item === null || typeof item !== 'object') return item;
+  const len = arr.length;
+  const projectedArr = new Array(len);
+
+  for (let i = 0; i < len; i++) {
+    const item = arr[i];
+    if (item === null || typeof item !== 'object') {
+      projectedArr[i] = item;
+      continue;
+    }
 
     const projected: Record<string, unknown> = {};
 
-    for (const subPath of subPaths) {
+    const subPathsLen = subPaths.length;
+    for (let j = 0; j < subPathsLen; j++) {
+      const subPath = subPaths[j];
       const value = getPath(item, subPath);
       if (value !== undefined) {
         if (subPath.length === 0) {
@@ -213,12 +232,15 @@ function projectArray(
     }
 
     // Apply exclusions
-    for (const excludePath of excludePaths) {
-      deletePath(projected, excludePath);
+    const excludePathsLen = excludePaths.length;
+    for (let j = 0; j < excludePathsLen; j++) {
+      deletePath(projected, excludePaths[j]);
     }
 
-    return projected;
-  });
+    projectedArr[i] = projected;
+  }
+
+  return projectedArr;
 }
 
 /**

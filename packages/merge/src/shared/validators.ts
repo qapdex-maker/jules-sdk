@@ -13,6 +13,9 @@
 // limitations under the License.
 
 export function validateFilePath(filePath: string): void {
+  if (!filePath) {
+    throw new Error('INVALID_FILE_PATH: File path cannot be empty');
+  }
   if (filePath.includes('\x00') || /[\x01-\x1f\x7f]/.test(filePath)) {
     throw new Error(
       `CONTROL_CHAR: File path contains control characters: ${filePath}`,
@@ -73,6 +76,9 @@ export function validateRepository(repo: string): void {
 }
 
 export function validateBranchName(branch: string): void {
+  if (!branch) {
+    throw new Error('INVALID_BRANCH: Branch name cannot be empty');
+  }
   if (branch.startsWith('refs/')) {
     throw new Error(
       `RESERVED_BRANCH: Branch name must not start with refs/: ${branch}`,

@@ -1,3 +1,8 @@
+## 2026-07-23 - Robustness of Merge Reconcile Validators on Falsy Inputs
+**Vulnerability:** The reconciliation `validateBranchName` and `validateFilePath` helpers in the `@google/jules-merge` package did not check for falsy/empty values before invoking string operations. This could lead to unhandled runtime type exceptions, crashing the execution context, or allowing unexpected bypasses if downstream functions default empty values in unforeseen ways.
+**Learning:** Enforcing non-empty values at the validation boundary ensures absolute system robustness, preventing potential Denial of Service (DoS) and input validation bypasses during conflict resolution execution.
+**Prevention:** Always validate all path/identifier parameters to ensure they are non-empty strings before proceeding with sub-string matching or other string manipulations.
+
 ## 2026-07-18 - Input Validation of Repository and Branch Names on SDK/MCP Entrypoints
 **Vulnerability:** The Core SDK and MCP entrypoints allowed arbitrary strings to be used for repository references and Git branch names during session creation and resource fetches, presenting opportunities for path traversal, script injection, and reference escape down the call chain.
 **Learning:** Validating input format at the highest level of the SDK ensures consistent security boundaries across all integration endpoints (including CLI, direct client usage, and MCP tools) before operations resolve URLs or format API payloads.

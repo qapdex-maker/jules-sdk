@@ -495,9 +495,9 @@ export async function select<T extends JulesDomain>(
       return order === 'desc' ? timeB - timeA : timeA - timeB;
     }
     if (order === 'desc') {
-      return idB.localeCompare(idA);
+      return idB < idA ? -1 : idB > idA ? 1 : 0;
     }
-    return idA.localeCompare(idB);
+    return idA < idB ? -1 : idA > idB ? 1 : 0;
   });
 
   let finalResults = results;

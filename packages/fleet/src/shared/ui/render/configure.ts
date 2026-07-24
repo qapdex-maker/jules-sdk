@@ -14,12 +14,14 @@
 
 import type { ConfigureEvent } from '../../events/configure.js';
 import type { RenderContext } from '../spec.js';
+import { repoConfigUrl, ansiLink } from '../session-url.js';
 
 /** Render a configure-domain event. */
 export function renderConfigureEvent(event: ConfigureEvent, ctx: RenderContext): void {
   switch (event.type) {
     case 'configure:start':
       ctx.info(`Configuring ${event.resource} for ${event.owner}/${event.repo}`);
+      ctx.info(`  ${ansiLink('View Configuration', repoConfigUrl(event.owner, event.repo))}`);
       break;
     case 'configure:label:created':
       ctx.info(`  ✓ Label "${event.name}" created`);

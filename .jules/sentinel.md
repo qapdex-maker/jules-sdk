@@ -1,3 +1,8 @@
+## 2026-07-24 - Integration of Repository Name Validation in Reconciliation Handlers
+**Vulnerability:** Although a robust repository validator (`validateRepository`) was defined in `packages/merge/src/shared/validators.ts`, it was never actually invoked inside the reconciliation entry point handlers (`scanHandler`, `getContentsHandler`, `mergeHandler`, and `pushHandler` via `validatePushInput`). This left the package exposed to format-bypass, control character, and path-traversal attacks through untrusted repository input strings.
+**Learning:** Having security utilities in the codebase is only the first step; they must be actively and consistently integrated at all untrusted boundaries/handlers to provide real security benefits.
+**Prevention:** Audit all handlers and API boundaries to ensure every untrusted input field is parsed and validated using established validators before proceeding with business logic.
+
 ## 2026-07-23 - Robustness of Merge Reconcile Validators on Falsy Inputs
 **Vulnerability:** The reconciliation `validateBranchName` and `validateFilePath` helpers in the `@google/jules-merge` package did not check for falsy/empty values before invoking string operations. This could lead to unhandled runtime type exceptions, crashing the execution context, or allowing unexpected bypasses if downstream functions default empty values in unforeseen ways.
 **Learning:** Enforcing non-empty values at the validation boundary ensures absolute system robustness, preventing potential Denial of Service (DoS) and input validation bypasses during conflict resolution execution.

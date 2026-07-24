@@ -226,6 +226,36 @@ describe('critical-paths', () => {
     expect(() => validateRepository('owner/.')).toThrow('PATH_TRAVERSAL');
   });
 
+  // ─── Handler Repository Validation Tests ─────────────────────
+
+  it('scanHandler rejects invalid repository names', async () => {
+    const { scanHandler } = await import('../../reconcile/scan-handler.js');
+    await expect(
+      scanHandler({} as any, { prs: [1], repo: 'owner/re@po' }),
+    ).rejects.toThrow();
+  });
+
+  it('getContentsHandler rejects invalid repository names', async () => {
+    const { getContentsHandler } = await import('../../reconcile/get-contents-handler.js');
+    await expect(
+      getContentsHandler({} as any, { filePath: 'src/config.ts', source: 'main', repo: 'owner/re@po' }),
+    ).rejects.toThrow();
+  });
+
+  it('mergeHandler rejects invalid repository names', async () => {
+    const { mergeHandler } = await import('../../reconcile/merge-handler.js');
+    await expect(
+      mergeHandler({} as any, { pr: 1, repo: 'owner/re@po' }),
+    ).rejects.toThrow();
+  });
+
+  it('pushHandler rejects invalid repository names', async () => {
+    const { pushHandler } = await import('../../reconcile/push-handler.js');
+    await expect(
+      pushHandler({} as any, { branch: 'reconcile/test', message: 'test', repo: 'owner/re@po' }),
+    ).rejects.toThrow();
+  });
+
   // ─── 4. dry-run behavior ──────────────────────────────────────
 
   it('stage-resolution --dry-run does not modify manifest', async () => {

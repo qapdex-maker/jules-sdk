@@ -31,43 +31,29 @@ import { Platform } from './platform/types.js';
 export function parseUnidiff(patch?: string | null): ParsedFile[] {
   if (!patch) return [];
   const files: ParsedFile[] = [];
-  // Split by diff headers (diff --git a/... b/...)
-  const diffSections = patch.split(/^diff --git /m).filter(Boolean);
 
-  for (const section of diffSections) {
-    const lines = section.split('\n');
+  // Single-pass O(N) line parsing optimization to completely avoid heavy nested splits.
+  // We split the entire patch by '\n' once, and aggregate results on the fly.
+  const lines = patch.split('\n');
+  const len = lines.length;
 
-    // Extract file path from the +++ line (destination file)
-    // Format: +++ b/path/to/file or +++ /dev/null
-    let path = '';
-    let fromPath = '';
-    let toPath = '';
+  let fromPath = '';
+  let toPath = '';
+  let hasFromDevNull = false;
+  let hasToDevNull = false;
+  let additions = 0;
+  let deletions = 0;
+  let inHunk = false;
+  let active = false;
 
-    for (const line of lines) {
-      if (line.startsWith('--- ')) {
-        // --- a/path or --- /dev/null
-        fromPath = line
-          .slice(4)
-          .replace(/^a\//, '')
-          .replace(/^\/dev\/null$/, '');
-      } else if (line.startsWith('+++ ')) {
-        // +++ b/path or +++ /dev/null
-        toPath = line
-          .slice(4)
-          .replace(/^b\//, '')
-          .replace(/^\/dev\/null$/, '');
-      }
-    }
-
-    // Determine change type and path
+  const pushFile = () => {
+    if (!active) return;
     let changeType: 'created' | 'modified' | 'deleted';
-    if (fromPath === '' || lines.some((l) => l.startsWith('--- /dev/null'))) {
+    let path = '';
+    if (fromPath === '' || hasFromDevNull) {
       changeType = 'created';
       path = toPath;
-    } else if (
-      toPath === '' ||
-      lines.some((l) => l.startsWith('+++ /dev/null'))
-    ) {
+    } else if (toPath === '' || hasToDevNull) {
       changeType = 'deleted';
       path = fromPath;
     } else {
@@ -75,31 +61,53 @@ export function parseUnidiff(patch?: string | null): ParsedFile[] {
       path = toPath;
     }
 
-    // Skip if we couldn't determine a path
-    if (!path) continue;
+    if (path) {
+      files.push({ path, changeType, additions, deletions });
+    }
+  };
 
-    // Count additions and deletions (lines starting with + or - in hunks)
-    let additions = 0;
-    let deletions = 0;
-    let inHunk = false;
-
-    for (const line of lines) {
-      if (line.startsWith('@@')) {
-        inHunk = true;
-        continue;
-      }
-      if (inHunk) {
-        if (line.startsWith('+') && !line.startsWith('+++')) {
-          additions++;
-        } else if (line.startsWith('-') && !line.startsWith('---')) {
-          deletions++;
-        }
-      }
+  for (let i = 0; i < len; i++) {
+    const line = lines[i];
+    if (line.startsWith('diff --git ')) {
+      pushFile();
+      // Reset accumulator variables for the next file section
+      fromPath = '';
+      toPath = '';
+      hasFromDevNull = false;
+      hasToDevNull = false;
+      additions = 0;
+      deletions = 0;
+      inHunk = false;
+      active = true;
+      continue;
     }
 
-    files.push({ path, changeType, additions, deletions });
+    if (!active) continue;
+
+    if (line.startsWith('--- ')) {
+      hasFromDevNull = line.startsWith('--- /dev/null');
+      fromPath = line
+        .slice(4)
+        .replace(/^a\//, '')
+        .replace(/^\/dev\/null$/, '');
+    } else if (line.startsWith('+++ ')) {
+      hasToDevNull = line.startsWith('+++ /dev/null');
+      toPath = line
+        .slice(4)
+        .replace(/^b\//, '')
+        .replace(/^\/dev\/null$/, '');
+    } else if (line.startsWith('@@')) {
+      inHunk = true;
+    } else if (inHunk) {
+      if (line.startsWith('+') && !line.startsWith('+++')) {
+        additions++;
+      } else if (line.startsWith('-') && !line.startsWith('---')) {
+        deletions++;
+      }
+    }
   }
 
+  pushFile();
   return files;
 }
 
@@ -112,40 +120,30 @@ export function parseUnidiffWithContent(
 ): GeneratedFile[] {
   if (!patch) return [];
   const files: GeneratedFile[] = [];
-  // Split by diff headers (diff --git a/... b/...)
-  const diffSections = patch.split(/^diff --git /m).filter(Boolean);
 
-  for (const section of diffSections) {
-    const lines = section.split('\n');
+  // Single-pass O(N) line parsing optimization to completely avoid heavy nested splits.
+  // We split the entire patch by '\n' once, and aggregate results on the fly.
+  const lines = patch.split('\n');
+  const len = lines.length;
 
-    // Extract file path from the +++ line (destination file)
-    let path = '';
-    let fromPath = '';
-    let toPath = '';
+  let fromPath = '';
+  let toPath = '';
+  let hasFromDevNull = false;
+  let hasToDevNull = false;
+  let additions = 0;
+  let deletions = 0;
+  let inHunk = false;
+  let active = false;
+  let contentLines: string[] = [];
 
-    for (const line of lines) {
-      if (line.startsWith('--- ')) {
-        fromPath = line
-          .slice(4)
-          .replace(/^a\//, '')
-          .replace(/^\/dev\/null$/, '');
-      } else if (line.startsWith('+++ ')) {
-        toPath = line
-          .slice(4)
-          .replace(/^b\//, '')
-          .replace(/^\/dev\/null$/, '');
-      }
-    }
-
-    // Determine change type and path
+  const pushFile = () => {
+    if (!active) return;
     let changeType: 'created' | 'modified' | 'deleted';
-    if (fromPath === '' || lines.some((l) => l.startsWith('--- /dev/null'))) {
+    let path = '';
+    if (fromPath === '' || hasFromDevNull) {
       changeType = 'created';
       path = toPath;
-    } else if (
-      toPath === '' ||
-      lines.some((l) => l.startsWith('+++ /dev/null'))
-    ) {
+    } else if (toPath === '' || hasToDevNull) {
       changeType = 'deleted';
       path = fromPath;
     } else {
@@ -153,37 +151,56 @@ export function parseUnidiffWithContent(
       path = toPath;
     }
 
-    // Skip if we couldn't determine a path
-    if (!path) continue;
+    if (path) {
+      const content = changeType === 'deleted' ? '' : contentLines.join('\n');
+      files.push({ path, changeType, content, additions, deletions });
+    }
+  };
 
-    // Count additions and deletions, and collect content
-    let additions = 0;
-    let deletions = 0;
-    let inHunk = false;
-    const contentLines: string[] = [];
-
-    for (const line of lines) {
-      if (line.startsWith('@@')) {
-        inHunk = true;
-        continue;
-      }
-      if (inHunk) {
-        if (line.startsWith('+') && !line.startsWith('+++')) {
-          additions++;
-          // Remove the leading '+' to get the actual content
-          contentLines.push(line.slice(1));
-        } else if (line.startsWith('-') && !line.startsWith('---')) {
-          deletions++;
-        }
-      }
+  for (let i = 0; i < len; i++) {
+    const line = lines[i];
+    if (line.startsWith('diff --git ')) {
+      pushFile();
+      // Reset accumulator variables for the next file section
+      fromPath = '';
+      toPath = '';
+      hasFromDevNull = false;
+      hasToDevNull = false;
+      additions = 0;
+      deletions = 0;
+      inHunk = false;
+      contentLines = [];
+      active = true;
+      continue;
     }
 
-    // For deleted files, content is empty
-    const content = changeType === 'deleted' ? '' : contentLines.join('\n');
+    if (!active) continue;
 
-    files.push({ path, changeType, content, additions, deletions });
+    if (line.startsWith('--- ')) {
+      hasFromDevNull = line.startsWith('--- /dev/null');
+      fromPath = line
+        .slice(4)
+        .replace(/^a\//, '')
+        .replace(/^\/dev\/null$/, '');
+    } else if (line.startsWith('+++ ')) {
+      hasToDevNull = line.startsWith('+++ /dev/null');
+      toPath = line
+        .slice(4)
+        .replace(/^b\//, '')
+        .replace(/^\/dev\/null$/, '');
+    } else if (line.startsWith('@@')) {
+      inHunk = true;
+    } else if (inHunk) {
+      if (line.startsWith('+') && !line.startsWith('+++')) {
+        additions++;
+        contentLines.push(line.slice(1));
+      } else if (line.startsWith('-') && !line.startsWith('---')) {
+        deletions++;
+      }
+    }
   }
 
+  pushFile();
   return files;
 }
 

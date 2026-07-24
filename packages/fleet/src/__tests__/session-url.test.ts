@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { sessionUrl, ansiLink } from '../shared/ui/session-url.js';
+import { sessionUrl, repoConfigUrl, ansiLink } from '../shared/ui/session-url.js';
 
 describe('ansiLink', () => {
   const originalEnvCI = process.env.CI;
@@ -59,6 +59,13 @@ describe('sessionUrl', () => {
     const url = sessionUrl('12345');
     expect(url).toBe('https://jules.google.com/session/12345');
     expect(url).not.toContain('/sessions/');
+  });
+});
+
+describe('repoConfigUrl', () => {
+  it('constructs correct URL for repository configuration', () => {
+    const url = repoConfigUrl('google', 'jules');
+    expect(url).toBe('https://jules.google.com/repo/github/google/jules/config');
   });
 });
 

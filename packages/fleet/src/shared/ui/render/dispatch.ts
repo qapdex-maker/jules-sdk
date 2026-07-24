@@ -37,7 +37,7 @@ export function renderDispatchEvent(
     case 'dispatch:issue:dispatched':
       ctx.stopSpinner(`#${event.number} → session ${event.sessionId}`);
       ctx.info(
-        `  ${ansiLink(sessionUrl(event.sessionId), sessionUrl(event.sessionId))}`,
+        `  ${ansiLink('View Session', sessionUrl(event.sessionId))}`,
       );
       break;
     case 'dispatch:issue:skipped':

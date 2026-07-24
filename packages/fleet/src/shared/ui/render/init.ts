@@ -39,11 +39,11 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       break;
     case 'init:pr:created':
       ctx.stopSpinner(`PR #${event.number} created`);
-      ctx.info(`  ${ansiLink(event.url, event.url)}`);
+      ctx.info(`  ${ansiLink('View Pull Request', event.url)}`);
       break;
     case 'init:done':
       ctx.success(
-        `Fleet initialized — PR: ${ansiLink(event.prUrl, event.prUrl)}`,
+        `Fleet initialized — PR: ${ansiLink('View Pull Request', event.prUrl)}`,
       );
       break;
     case 'init:auth:detected':

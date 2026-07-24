@@ -48,7 +48,7 @@ describe('renderMergeEvent', () => {
       'info:   ↳ Escalated PR #123 → session session_abc_123 (3 consecutive failures)',
     );
     const expectedLink = ansiLink(
-      sessionUrl('session_abc_123'),
+      'View Session',
       sessionUrl('session_abc_123'),
     );
     expect(logs).toContain(`info:     ${expectedLink}`);
@@ -66,7 +66,7 @@ describe('renderMergeEvent', () => {
     );
     expect(logs).toContain('stopSpinner: Batch resolved #101, #102 → session session_batch_456');
     const expectedLink = ansiLink(
-      sessionUrl('session_batch_456'),
+      'View Session',
       sessionUrl('session_batch_456'),
     );
     expect(logs).toContain(`info:   ${expectedLink}`);
@@ -84,7 +84,7 @@ describe('renderMergeEvent', () => {
     );
     expect(logs).toContain('stopSpinner: Re-dispatched PR #789 → session session_redispatch_789');
     const expectedLink = ansiLink(
-      sessionUrl('session_redispatch_789'),
+      'View Session',
       sessionUrl('session_redispatch_789'),
     );
     expect(logs).toContain(`info:   ${expectedLink}`);
@@ -113,7 +113,7 @@ describe('renderMergeEvent', () => {
     );
     expect(logsNotified).toContain('stopSpinner: Notified session session_notify_456 of conflict on PR #456');
     const expectedLink = ansiLink(
-      sessionUrl('session_notify_456'),
+      'View Session',
       sessionUrl('session_notify_456'),
     );
     expect(logsNotified).toContain(`info:   ${expectedLink}`);

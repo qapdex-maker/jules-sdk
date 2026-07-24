@@ -30,9 +30,11 @@ import { writeManifest, type Manifest } from './manifest.js';
 import type { ScanContext, ScanOutput } from './scan-types.js';
 import { discoverPrs } from './scan-discover.js';
 import { classifyFiles } from './scan-classify.js';
+import { validateRepository } from '../shared/validators.js';
 
 export async function scanHandler(octokit: Octokit, rawInput: unknown) {
   const input = ScanInputSchema.parse(rawInput);
+  validateRepository(input.repo);
   const [owner, repo] = input.repo.split('/');
   if (!owner || !repo) {
     throw new Error('Repo must be in owner/repo format');

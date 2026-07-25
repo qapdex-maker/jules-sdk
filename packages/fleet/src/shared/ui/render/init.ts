@@ -14,7 +14,7 @@
 
 import type { InitEvent } from '../../events/init.js';
 import type { RenderContext } from '../spec.js';
-import { ansiLink } from '../session-url.js';
+import { ansiLink, ansiGreen, ansiYellow } from '../session-url.js';
 
 /** Render an init-domain event. */
 export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
@@ -29,10 +29,10 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.stopSpinner(`Branch ${event.name} created`);
       break;
     case 'init:file:committed':
-      ctx.info(`  ✓ ${event.path}`);
+      ctx.info(`  ${ansiGreen('✓')} ${event.path}`);
       break;
     case 'init:file:skipped':
-      ctx.warn(`  ⊘ ${event.path} — ${event.reason}`);
+      ctx.warn(`  ${ansiYellow('⊘')} ${event.path} — ${event.reason}`);
       break;
     case 'init:pr:creating':
       ctx.startSpinner('Creating pull request…');
@@ -58,7 +58,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.stopSpinner(`Secret ${event.name} saved`);
       break;
     case 'init:secret:skipped':
-      ctx.warn(`  ⊘ ${event.name} — ${event.reason}`);
+      ctx.warn(`  ${ansiYellow('⊘')} ${event.name} — ${event.reason}`);
       break;
     case 'init:dry-run':
       ctx.info('Would create:');

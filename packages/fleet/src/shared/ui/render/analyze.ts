@@ -14,7 +14,7 @@
 
 import type { AnalyzeEvent } from '../../events/analyze.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl, ansiLink } from '../session-url.js';
+import { sessionUrl, ansiLink, ansiDim } from '../session-url.js';
 
 /** Render an analyze-domain event. */
 export function renderAnalyzeEvent(
@@ -29,7 +29,7 @@ export function renderAnalyzeEvent(
       break;
     case 'analyze:goal:start':
       if (event.total > 1) {
-        ctx.step(`[${event.index}/${event.total}] ${event.file}`);
+        ctx.step(`${ansiDim(`[${event.index}/${event.total}]`)} ${event.file}`);
       } else {
         ctx.step(event.file);
       }

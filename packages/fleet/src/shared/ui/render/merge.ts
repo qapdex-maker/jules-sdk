@@ -14,7 +14,14 @@
 
 import type { MergeEvent } from '../../events/merge.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl, ansiLink } from '../session-url.js';
+import {
+  sessionUrl,
+  ansiLink,
+  ansiGreen,
+  ansiRed,
+  ansiYellow,
+  ansiDim,
+} from '../session-url.js';
 
 /** Render a merge-domain event. */
 export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
@@ -42,9 +49,15 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       ctx.startSpinner(`Waiting for CI on PR #${event.prNumber}…`);
       break;
     case 'merge:ci:check': {
-      const icon = event.status === 'pass' ? '✓' : event.status === 'fail' ? '✗' : '…';
-      const dur = event.duration ? ` (${event.duration}s)` : '';
-      ctx.info(`  ${icon} ${event.name}${dur}`);
+      const icon =
+        event.status === 'pass'
+          ? ansiGreen('✓')
+          : event.status === 'fail'
+            ? ansiRed('✗')
+            : ansiYellow('…');
+      const name = event.status === 'fail' ? ansiRed(event.name) : event.name;
+      const dur = event.duration ? ansiDim(` (${event.duration}s)`) : '';
+      ctx.info(`  ${icon} ${name}${dur}`);
       break;
     }
     case 'merge:ci:passed':
@@ -63,7 +76,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       ctx.startSpinner(`Merging PR #${event.prNumber}…`);
       break;
     case 'merge:pr:merged':
-      ctx.stopSpinner(`PR #${event.prNumber} merged ✓`);
+      ctx.stopSpinner(`PR #${event.prNumber} merged ${ansiGreen('✓')}`);
       break;
     case 'merge:pr:skipped':
       ctx.warn(`  ⊘ PR #${event.prNumber}: ${event.reason}`);
@@ -72,35 +85,48 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       ctx.stopSpinner(`Conflict detected on PR #${event.prNumber}`);
       break;
     case 'merge:conflict:escalated':
-      ctx.info(`  ↳ Escalated PR #${event.prNumber} → session ${event.sessionId} (${event.failureCount} consecutive failures)`);
+      ctx.info(
+        `  ↳ Escalated PR #${event.prNumber} → session ${event.sessionId} (${event.failureCount} consecutive failures)`,
+      );
       ctx.info(`    ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
     case 'merge:conflict:notifying':
-      ctx.startSpinner(`Notifying session ${event.sessionId} of conflict on PR #${event.prNumber}…`);
+      ctx.startSpinner(
+        `Notifying session ${event.sessionId} of conflict on PR #${event.prNumber}…`,
+      );
       break;
     case 'merge:conflict:notified':
-      ctx.stopSpinner(`Notified session ${event.sessionId} of conflict on PR #${event.prNumber}`);
+      ctx.stopSpinner(
+        `Notified session ${event.sessionId} of conflict on PR #${event.prNumber}`,
+      );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
     case 'merge:plan:computed': {
-      const groupDesc = event.conflictGroups.length > 0
-        ? `, ${event.conflictGroups.length} conflict group(s)`
-        : '';
+      const groupDesc =
+        event.conflictGroups.length > 0
+          ? `, ${event.conflictGroups.length} conflict group(s)`
+          : '';
       ctx.info(`Plan: ${event.independent.length} independent${groupDesc}`);
       break;
     }
     case 'merge:batch-resolve:start':
-      ctx.startSpinner(`Batch resolving ${event.prNumbers.map(n => `#${n}`).join(', ')}…`);
+      ctx.startSpinner(
+        `Batch resolving ${event.prNumbers.map((n) => `#${n}`).join(', ')}…`,
+      );
       break;
     case 'merge:batch-resolve:done':
-      ctx.stopSpinner(`Batch resolved ${event.prNumbers.map(n => `#${n}`).join(', ')} → session ${event.sessionId}`);
+      ctx.stopSpinner(
+        `Batch resolved ${event.prNumbers.map((n) => `#${n}`).join(', ')} → session ${event.sessionId}`,
+      );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
     case 'merge:redispatch:start':
       ctx.startSpinner(`Re-dispatching PR #${event.oldPr}…`);
       break;
     case 'merge:redispatch:done':
-      ctx.stopSpinner(`Re-dispatched PR #${event.oldPr} → session ${event.sessionId}`);
+      ctx.stopSpinner(
+        `Re-dispatched PR #${event.oldPr} → session ${event.sessionId}`,
+      );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
     case 'merge:done':

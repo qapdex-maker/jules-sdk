@@ -45,3 +45,35 @@ export function ansiLink(text: string, url: string): string {
   const styledText = `\x1b[36m\x1b[4m${text}\x1b[24m\x1b[39m`;
   return `\x1b]8;;${url}\x07${styledText}\x1b]8;;\x07`;
 }
+
+/**
+ * Apply green color to text if terminal is interactive.
+ */
+export function ansiGreen(text: string): string {
+  const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
+  return isInteractive ? `\x1b[32m${text}\x1b[39m` : text;
+}
+
+/**
+ * Apply red color to text if terminal is interactive.
+ */
+export function ansiRed(text: string): string {
+  const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
+  return isInteractive ? `\x1b[31m${text}\x1b[39m` : text;
+}
+
+/**
+ * Apply yellow color to text if terminal is interactive.
+ */
+export function ansiYellow(text: string): string {
+  const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
+  return isInteractive ? `\x1b[33m${text}\x1b[39m` : text;
+}
+
+/**
+ * Apply dim style to text if terminal is interactive.
+ */
+export function ansiDim(text: string): string {
+  const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
+  return isInteractive ? `\x1b[2m${text}\x1b[22m` : text;
+}

@@ -1,3 +1,8 @@
+## 2026-07-27 - Input Validation at MCP Protocol Boundaries to Prevent Injection and Traversal
+**Vulnerability:** Although core SDK functions had repository and branch validation, the @google/jules-mcp functions did not validate their incoming string parameters directly. In a monorepo, distinct packages can expose tools to external LLM execution environments (like MCP), representing a primary untrusted boundary that needs defensive sanitization.
+**Learning:** Security validation must occur at every package or protocol boundary (like MCP, CLI, or API) to prevent downstream security leaks or unvalidated inputs in case downstream SDK methods are modified, bypassed, or directly called in unforeseen contexts.
+**Prevention:** Always identify and validate untrusted input structures (such as `repo`, `branch`, and `sessionId`) at the absolute outermost boundary of protocol and tool handlers before passing them to internal client or filesystem logic.
+
 ## 2026-07-24 - Integration of Repository Name Validation in Reconciliation Handlers
 **Vulnerability:** Although a robust repository validator (`validateRepository`) was defined in `packages/merge/src/shared/validators.ts`, it was never actually invoked inside the reconciliation entry point handlers (`scanHandler`, `getContentsHandler`, `mergeHandler`, and `pushHandler` via `validatePushInput`). This left the package exposed to format-bypass, control character, and path-traversal attacks through untrusted repository input strings.
 **Learning:** Having security utilities in the codebase is only the first step; they must be actively and consistently integrated at all untrusted boundaries/handlers to provide real security benefits.

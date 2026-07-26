@@ -260,6 +260,8 @@ export interface ProjectionPlan {
   byTopLevel: Map<string, string[][]>;
   exclusions: SelectExpression[];
   isSimpleTopLevel?: boolean;
+  exclusionSubPathsByTopLevel: Map<string, string[][]>;
+  nestedSelectsByTopLevel: Map<string, string[]>;
 }
 
 const projectionPlanCache = new Map<string, ProjectionPlan>();
@@ -296,7 +298,40 @@ export function getProjectionPlan(selects: string[]): ProjectionPlan {
       subPaths.push(incl.path.slice(1));
     }
 
-    plan = { hasWildcard, byTopLevel, exclusions, isSimpleTopLevel };
+    // Pre-compile and cache exclusion sub-paths and nested selects per top-level field
+    // to bypass costly array mappings and string manipulations during runtime scans.
+    const exclusionSubPathsByTopLevel = new Map<string, string[][]>();
+    const exclusionsLen = exclusions.length;
+    for (let i = 0; i < exclusionsLen; i++) {
+      const excl = exclusions[i];
+      if (excl.path.length === 0) continue;
+      const top = excl.path[0];
+      let subPaths = exclusionSubPathsByTopLevel.get(top);
+      if (!subPaths) {
+        subPaths = [];
+        exclusionSubPathsByTopLevel.set(top, subPaths);
+      }
+      subPaths.push(excl.path.slice(1));
+    }
+
+    const nestedSelectsByTopLevel = new Map<string, string[]>();
+    for (const [topField, subPaths] of byTopLevel) {
+      const nestedLen = subPaths.length;
+      const nested = new Array(nestedLen);
+      for (let i = 0; i < nestedLen; i++) {
+        nested[i] = subPaths[i].join('.');
+      }
+      nestedSelectsByTopLevel.set(topField, nested);
+    }
+
+    plan = {
+      hasWildcard,
+      byTopLevel,
+      exclusions,
+      isSimpleTopLevel,
+      exclusionSubPathsByTopLevel,
+      nestedSelectsByTopLevel,
+    };
     projectionPlanCache.set(cacheKey, plan);
   }
   return plan;
@@ -313,7 +348,14 @@ export function projectDocument(
 
   // Use compiled projection plan to bypass redundant parsing/grouping
   const plan = getProjectionPlan(selects);
-  const { hasWildcard, byTopLevel, exclusions, isSimpleTopLevel } = plan;
+  const {
+    hasWildcard,
+    byTopLevel,
+    exclusions,
+    isSimpleTopLevel,
+    exclusionSubPathsByTopLevel,
+    nestedSelectsByTopLevel,
+  } = plan;
 
   // Fast-path: Optimized top-level field selection.
   // Avoids sub-path checks, array and type detection, and recursive projection.
@@ -347,9 +389,9 @@ export function projectDocument(
 
       if (Array.isArray(value)) {
         // Handle array projection
-        const exclusionSubPaths = exclusions
-          .filter((e) => e.path[0] === topField)
-          .map((e) => e.path.slice(1));
+        // Retrieve pre-compiled exclusion sub-paths to avoid allocating/mapping arrays inside the hot loop
+        const exclusionSubPaths =
+          exclusionSubPathsByTopLevel.get(topField) || [];
 
         if (subPaths.some((p) => p.length === 0)) {
           // Include full array (possibly with exclusions)
@@ -365,7 +407,8 @@ export function projectDocument(
           result[topField] = deepClone(value);
         } else {
           // Recursively project nested fields
-          const nestedSelects = subPaths.map((p) => p.join('.'));
+          // Retrieve pre-compiled nested selects to avoid map/join overhead in the hot loop
+          const nestedSelects = nestedSelectsByTopLevel.get(topField) || [];
           result[topField] = projectDocument(
             value as Record<string, unknown>,
             nestedSelects,
@@ -379,8 +422,9 @@ export function projectDocument(
   }
 
   // Apply exclusions
-  for (const excl of exclusions) {
-    deletePath(result, excl.path);
+  const exclusionsLen = exclusions.length;
+  for (let i = 0; i < exclusionsLen; i++) {
+    deletePath(result, exclusions[i].path);
   }
 
   return result;

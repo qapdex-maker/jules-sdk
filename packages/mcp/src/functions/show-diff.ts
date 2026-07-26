@@ -1,4 +1,4 @@
-import type { JulesClient, ChangeSetArtifact } from '@google/jules-sdk';
+import { type JulesClient, type ChangeSetArtifact, validateSessionId } from '@google/jules-sdk';
 import type {
   ShowDiffResult,
   ShowDiffOptions,
@@ -40,6 +40,7 @@ export async function showDiff(
   if (!sessionId) {
     throw new Error('sessionId is required');
   }
+  validateSessionId(sessionId);
 
   const { file, activityId } = options;
 

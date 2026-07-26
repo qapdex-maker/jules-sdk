@@ -14,10 +14,11 @@
 
 import type { ErrorEvent } from '../../events/error.js';
 import type { RenderContext } from '../spec.js';
+import { ansiHighlight } from '../session-url.js';
 
 /** Render an error event. */
 export function renderErrorEvent(event: ErrorEvent, ctx: RenderContext): void {
   ctx.stopSpinner();
   ctx.error(`[${event.code}] ${event.message}`);
-  if (event.suggestion) ctx.info(`  💡 ${event.suggestion}`);
+  if (event.suggestion) ctx.info(`  💡 ${ansiHighlight(event.suggestion)}`);
 }

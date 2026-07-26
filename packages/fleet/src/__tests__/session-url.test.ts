@@ -13,7 +13,33 @@
 // limitations under the License.
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { sessionUrl, repoConfigUrl, ansiLink } from '../shared/ui/session-url.js';
+import { sessionUrl, repoConfigUrl, ansiLink, ansiHighlight } from '../shared/ui/session-url.js';
+
+describe('ansiHighlight', () => {
+  const originalEnvCI = process.env.CI;
+  const originalIsTTY = process.stdout.isTTY;
+
+  afterEach(() => {
+    process.env.CI = originalEnvCI;
+    process.stdout.isTTY = originalIsTTY;
+  });
+
+  it('highlights backticked text in interactive/TTY environment', () => {
+    delete process.env.CI;
+    process.stdout.isTTY = true;
+
+    const result = ansiHighlight('Use `jules-fleet configure` now');
+    expect(result).toBe('Use `\x1b[33mjules-fleet configure\x1b[39m` now');
+  });
+
+  it('leaves text unhighlighted when not in interactive/TTY environment', () => {
+    delete process.env.CI;
+    process.stdout.isTTY = false;
+
+    const result = ansiHighlight('Use `jules-fleet configure` now');
+    expect(result).toBe('Use `jules-fleet configure` now');
+  });
+});
 
 describe('ansiLink', () => {
   const originalEnvCI = process.env.CI;

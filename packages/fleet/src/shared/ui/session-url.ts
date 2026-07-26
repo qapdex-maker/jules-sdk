@@ -77,3 +77,15 @@ export function ansiDim(text: string): string {
   const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
   return isInteractive ? `\x1b[2m${text}\x1b[22m` : text;
 }
+
+/**
+ * Style backticked terms (like `some-command`) in yellow if terminal is interactive,
+ * to make commands and key terms easily discoverable in CLI outputs.
+ */
+export function ansiHighlight(text: string): string {
+  const isInteractive = process.env.CI !== 'true' && !!process.stdout.isTTY;
+  if (!isInteractive) {
+    return text;
+  }
+  return text.replace(/`([^`]+)`/g, '`\x1b[33m$1\x1b[39m`');
+}

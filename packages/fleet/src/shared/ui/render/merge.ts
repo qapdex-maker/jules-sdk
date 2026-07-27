@@ -79,7 +79,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       ctx.stopSpinner(`PR #${event.prNumber} merged ${ansiGreen('✓')}`);
       break;
     case 'merge:pr:skipped':
-      ctx.warn(`  ⊘ PR #${event.prNumber}: ${event.reason}`);
+      ctx.warn(`  ${ansiYellow('⊘')} PR #${event.prNumber}: ${event.reason}`);
       break;
     case 'merge:conflict:detected':
       ctx.stopSpinner(`Conflict detected on PR #${event.prNumber}`);

@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderMergeEvent } from '../shared/ui/render/merge.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { sessionUrl, ansiLink } from '../shared/ui/session-url.js';
+import { sessionUrl, ansiLink, ansiYellow } from '../shared/ui/session-url.js';
 
 describe('renderMergeEvent', () => {
   const createMockCtx = () => {
@@ -88,6 +88,19 @@ describe('renderMergeEvent', () => {
       sessionUrl('session_redispatch_789'),
     );
     expect(logs).toContain(`info:   ${expectedLink}`);
+  });
+
+  it('renders merge:pr:skipped with styled yellow warning icon', () => {
+    const { ctx, logs } = createMockCtx();
+    renderMergeEvent(
+      {
+        type: 'merge:pr:skipped',
+        prNumber: 999,
+        reason: 'Missing approval',
+      },
+      ctx,
+    );
+    expect(logs).toContain(`warn:   ${ansiYellow('⊘')} PR #999: Missing approval`);
   });
 
   it('renders merge:conflict:notifying and merge:conflict:notified correctly', () => {

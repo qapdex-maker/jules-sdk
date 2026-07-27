@@ -15,7 +15,12 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { validateSessionId, validateRepository, validateBranchName } from '../../src/utils/validators.js';
+import {
+  validateSessionId,
+  validateRepository,
+  validateBranchName,
+  validateFilePath,
+} from '../../src/utils/validators.js';
 
 describe('validateSessionId', () => {
   test('allows standard session IDs', () => {
@@ -30,23 +35,37 @@ describe('validateSessionId', () => {
   });
 
   test('rejects control characters', () => {
-    expect(() => validateSessionId('session\x00_id')).toThrow('INVALID_SESSION_ID');
-    expect(() => validateSessionId('sessions/session\x00_id')).toThrow('INVALID_SESSION_ID');
-    expect(() => validateSessionId('session\x1f_id')).toThrow('INVALID_SESSION_ID');
+    expect(() => validateSessionId('session\x00_id')).toThrow(
+      'INVALID_SESSION_ID',
+    );
+    expect(() => validateSessionId('sessions/session\x00_id')).toThrow(
+      'INVALID_SESSION_ID',
+    );
+    expect(() => validateSessionId('session\x1f_id')).toThrow(
+      'INVALID_SESSION_ID',
+    );
   });
 
   test('rejects slashes and backslashes (after prefix)', () => {
-    expect(() => validateSessionId('sessions/../etc/passwd')).toThrow('INVALID_SESSION_ID');
-    expect(() => validateSessionId('sessions/abc/def')).toThrow('INVALID_SESSION_ID');
+    expect(() => validateSessionId('sessions/../etc/passwd')).toThrow(
+      'INVALID_SESSION_ID',
+    );
+    expect(() => validateSessionId('sessions/abc/def')).toThrow(
+      'INVALID_SESSION_ID',
+    );
     expect(() => validateSessionId('abc\\def')).toThrow('INVALID_SESSION_ID');
-    expect(() => validateSessionId('/etc/passwd')).toThrow('INVALID_SESSION_ID');
+    expect(() => validateSessionId('/etc/passwd')).toThrow(
+      'INVALID_SESSION_ID',
+    );
   });
 
   test('rejects "." and ".."', () => {
     expect(() => validateSessionId('.')).toThrow('INVALID_SESSION_ID');
     expect(() => validateSessionId('..')).toThrow('INVALID_SESSION_ID');
     expect(() => validateSessionId('sessions/.')).toThrow('INVALID_SESSION_ID');
-    expect(() => validateSessionId('sessions/..')).toThrow('INVALID_SESSION_ID');
+    expect(() => validateSessionId('sessions/..')).toThrow(
+      'INVALID_SESSION_ID',
+    );
   });
 });
 
@@ -63,16 +82,30 @@ describe('validateRepository', () => {
 
   test('rejects repository strings without exact owner/repo format', () => {
     expect(() => validateRepository('owner')).toThrow('INVALID_REPOSITORY');
-    expect(() => validateRepository('owner/repo/extra')).toThrow('INVALID_REPOSITORY');
-    expect(() => validateRepository('owner//repo')).toThrow('INVALID_REPOSITORY');
-    expect(() => validateRepository('/owner/repo')).toThrow('INVALID_REPOSITORY');
-    expect(() => validateRepository('owner/repo/')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner/repo/extra')).toThrow(
+      'INVALID_REPOSITORY',
+    );
+    expect(() => validateRepository('owner//repo')).toThrow(
+      'INVALID_REPOSITORY',
+    );
+    expect(() => validateRepository('/owner/repo')).toThrow(
+      'INVALID_REPOSITORY',
+    );
+    expect(() => validateRepository('owner/repo/')).toThrow(
+      'INVALID_REPOSITORY',
+    );
   });
 
   test('rejects repository strings containing invalid characters', () => {
-    expect(() => validateRepository('owner$/repo')).toThrow('INVALID_REPOSITORY');
-    expect(() => validateRepository('owner/re@po')).toThrow('INVALID_REPOSITORY');
-    expect(() => validateRepository('owner:/repo')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('owner$/repo')).toThrow(
+      'INVALID_REPOSITORY',
+    );
+    expect(() => validateRepository('owner/re@po')).toThrow(
+      'INVALID_REPOSITORY',
+    );
+    expect(() => validateRepository('owner:/repo')).toThrow(
+      'INVALID_REPOSITORY',
+    );
   });
 
   test('rejects control characters', () => {
@@ -83,8 +116,12 @@ describe('validateRepository', () => {
   test('rejects path traversal segments', () => {
     expect(() => validateRepository('../repo')).toThrow('PATH_TRAVERSAL');
     expect(() => validateRepository('owner/..')).toThrow('PATH_TRAVERSAL');
-    expect(() => validateRepository('../owner/repo')).toThrow('INVALID_REPOSITORY');
-    expect(() => validateRepository('owner/../repo')).toThrow('INVALID_REPOSITORY');
+    expect(() => validateRepository('../owner/repo')).toThrow(
+      'INVALID_REPOSITORY',
+    );
+    expect(() => validateRepository('owner/../repo')).toThrow(
+      'INVALID_REPOSITORY',
+    );
     expect(() => validateRepository('./repo')).toThrow('PATH_TRAVERSAL');
     expect(() => validateRepository('owner/.')).toThrow('PATH_TRAVERSAL');
   });
@@ -102,7 +139,9 @@ describe('validateBranchName', () => {
   });
 
   test('rejects branch names starting with refs/', () => {
-    expect(() => validateBranchName('refs/heads/main')).toThrow('RESERVED_BRANCH');
+    expect(() => validateBranchName('refs/heads/main')).toThrow(
+      'RESERVED_BRANCH',
+    );
   });
 
   test('rejects spaces in branch names', () => {
@@ -129,6 +168,39 @@ describe('validateBranchName', () => {
   });
 
   test('rejects trailing .lock', () => {
-    expect(() => validateBranchName('my-branch.lock')).toThrow('INVALID_BRANCH');
+    expect(() => validateBranchName('my-branch.lock')).toThrow(
+      'INVALID_BRANCH',
+    );
+  });
+});
+
+describe('validateFilePath', () => {
+  test('allows relative file paths', () => {
+    expect(() => validateFilePath('src/index.ts')).not.toThrow();
+    expect(() => validateFilePath('index.js')).not.toThrow();
+    expect(() => validateFilePath('docs/readme.md')).not.toThrow();
+  });
+
+  test('rejects empty file paths', () => {
+    expect(() => validateFilePath('')).toThrow('INVALID_FILE_PATH');
+  });
+
+  test('rejects absolute paths', () => {
+    expect(() => validateFilePath('/etc/passwd')).toThrow('ABSOLUTE_PATH');
+    expect(() => validateFilePath('C:/Windows/System32')).toThrow(
+      'ABSOLUTE_PATH',
+    );
+  });
+
+  test('rejects path traversal', () => {
+    expect(() => validateFilePath('../etc/passwd')).toThrow('PATH_TRAVERSAL');
+    expect(() => validateFilePath('src/../../etc/passwd')).toThrow(
+      'PATH_TRAVERSAL',
+    );
+  });
+
+  test('rejects control characters', () => {
+    expect(() => validateFilePath('src/foo\x00.ts')).toThrow('CONTROL_CHAR');
+    expect(() => validateFilePath('src/foo\x1f.ts')).toThrow('CONTROL_CHAR');
   });
 });

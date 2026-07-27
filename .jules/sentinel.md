@@ -1,3 +1,8 @@
+## 2026-07-28 - Unified File Path Validation and Integration in MCP showDiff
+**Vulnerability:** While repository and branch name validations existed, user-supplied relative file path arguments (like the `file` option in the MCP `show_code_diff` tool) were passed to file extraction and diff filtering logic without checks. This opened a potential vector for control character injection, absolute path escapes, and directory traversal (`..`) attempts.
+**Learning:** File paths supplied by untrusted external users/clients (such as through MCP tool execution) represent a major vulnerability surface and must be strictly validated at the outer protocol boundary before being processed.
+**Prevention:** Implement a central, robust file path validator (`validateFilePath`) to enforce relative paths, reject control characters, absolute paths, and path traversal (`..`), and integrate it consistently across all outer API and tool boundaries.
+
 ## 2026-07-27 - Input Validation at MCP Protocol Boundaries to Prevent Injection and Traversal
 **Vulnerability:** Although core SDK functions had repository and branch validation, the @google/jules-mcp functions did not validate their incoming string parameters directly. In a monorepo, distinct packages can expose tools to external LLM execution environments (like MCP), representing a primary untrusted boundary that needs defensive sanitization.
 **Learning:** Security validation must occur at every package or protocol boundary (like MCP, CLI, or API) to prevent downstream security leaks or unvalidated inputs in case downstream SDK methods are modified, bypassed, or directly called in unforeseen contexts.

@@ -137,4 +137,5 @@ export {
   validateSessionId,
   validateRepository,
   validateBranchName,
+  validateFilePath,
 } from './utils/validators.js';

@@ -141,3 +141,29 @@ export function validateBranchName(branch: string): void {
     throw new Error(`INVALID_BRANCH: Branch name ends with .lock: ${branch}`);
   }
 }
+
+/**
+ * Validates a given file path to prevent directory/path traversal, control character,
+ * and absolute path escape risks.
+ *
+ * @param filePath - The file path to validate.
+ * @throws {Error} If the file path is invalid.
+ */
+export function validateFilePath(filePath: string): void {
+  if (!filePath) {
+    throw new Error('INVALID_FILE_PATH: File path cannot be empty');
+  }
+  if (filePath.includes('\x00') || /[\x01-\x1f\x7f]/.test(filePath)) {
+    throw new Error(
+      `CONTROL_CHAR: File path contains control characters: ${filePath}`,
+    );
+  }
+  const normalized = filePath.replace(/\\/g, '/');
+  if (normalized.startsWith('/') || /^[a-zA-Z]:/.test(normalized)) {
+    throw new Error(`ABSOLUTE_PATH: File path must be relative: ${filePath}`);
+  }
+  const parts = normalized.split('/');
+  if (parts.some((p) => p === '..')) {
+    throw new Error(`PATH_TRAVERSAL: File path escapes repo root: ${filePath}`);
+  }
+}

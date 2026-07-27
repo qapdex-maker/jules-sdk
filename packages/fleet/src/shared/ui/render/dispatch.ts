@@ -14,7 +14,7 @@
 
 import type { DispatchEvent } from '../../events/dispatch.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl, ansiLink } from '../session-url.js';
+import { sessionUrl, ansiLink, ansiYellow } from '../session-url.js';
 
 /** Render a dispatch-domain event. */
 export function renderDispatchEvent(
@@ -41,7 +41,7 @@ export function renderDispatchEvent(
       );
       break;
     case 'dispatch:issue:skipped':
-      ctx.warn(`  ⊘ #${event.number}: ${event.reason}`);
+      ctx.warn(`  ${ansiYellow('⊘')} #${event.number}: ${event.reason}`);
       break;
     case 'dispatch:done':
       ctx.success(

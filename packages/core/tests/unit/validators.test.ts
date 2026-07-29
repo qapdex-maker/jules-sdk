@@ -20,6 +20,7 @@ import {
   validateRepository,
   validateBranchName,
   validateFilePath,
+  validateActivityId,
 } from '../../src/utils/validators.js';
 
 describe('validateSessionId', () => {
@@ -202,5 +203,31 @@ describe('validateFilePath', () => {
   test('rejects control characters', () => {
     expect(() => validateFilePath('src/foo\x00.ts')).toThrow('CONTROL_CHAR');
     expect(() => validateFilePath('src/foo\x1f.ts')).toThrow('CONTROL_CHAR');
+  });
+});
+
+describe('validateActivityId', () => {
+  test('allows standard activity IDs', () => {
+    expect(() => validateActivityId('activity_123')).not.toThrow();
+    expect(() => validateActivityId('act-567_abc')).not.toThrow();
+  });
+
+  test('rejects empty activity IDs', () => {
+    expect(() => validateActivityId('')).toThrow('INVALID_ACTIVITY_ID');
+  });
+
+  test('rejects control characters', () => {
+    expect(() => validateActivityId('act\x00_id')).toThrow('CONTROL_CHAR');
+    expect(() => validateActivityId('act\x1f_id')).toThrow('CONTROL_CHAR');
+  });
+
+  test('rejects slashes and backslashes', () => {
+    expect(() => validateActivityId('act/123')).toThrow('INVALID_ACTIVITY_ID');
+    expect(() => validateActivityId('act\\123')).toThrow('INVALID_ACTIVITY_ID');
+  });
+
+  test('rejects "." and ".."', () => {
+    expect(() => validateActivityId('.')).toThrow('PATH_TRAVERSAL');
+    expect(() => validateActivityId('..')).toThrow('PATH_TRAVERSAL');
   });
 });

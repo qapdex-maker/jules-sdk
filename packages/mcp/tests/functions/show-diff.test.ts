@@ -124,4 +124,20 @@ diff --git a/src/b.ts b/src/b.ts
       ).rejects.toThrow('CONTROL_CHAR');
     });
   });
+
+  describe('input validation on activity ID', () => {
+    it('throws validation error if activity ID is invalid', async () => {
+      await expect(
+        showDiff(mockClient, 'some-session', { activityId: 'act\x00_id' }),
+      ).rejects.toThrow('CONTROL_CHAR');
+
+      await expect(
+        showDiff(mockClient, 'some-session', { activityId: 'act/123' }),
+      ).rejects.toThrow('INVALID_ACTIVITY_ID');
+
+      await expect(
+        showDiff(mockClient, 'some-session', { activityId: '..' }),
+      ).rejects.toThrow('PATH_TRAVERSAL');
+    });
+  });
 });

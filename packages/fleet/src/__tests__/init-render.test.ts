@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderInitEvent } from '../shared/ui/render/init.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { ansiLink, ansiYellow } from '../shared/ui/session-url.js';
+import { ansiLink, ansiYellow, ansiRed } from '../shared/ui/session-url.js';
 
 describe('renderInitEvent', () => {
   const createMockCtx = () => {
@@ -57,7 +57,10 @@ describe('renderInitEvent', () => {
       ctx,
     );
     expect(logs).toContain('stopSpinner: Repository google/jules created');
-    const expectedLink = ansiLink('View Repository', 'https://github.com/google/jules');
+    const expectedLink = ansiLink(
+      'View Repository',
+      'https://github.com/google/jules',
+    );
     expect(logs).toContain(`info:   ${expectedLink}`);
   });
 
@@ -70,7 +73,9 @@ describe('renderInitEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain(`warn:   ${ansiYellow('⊘')} Repository google/jules already exists`);
+    expect(logs).toContain(
+      `warn:   ${ansiYellow('⊘')} Repository google/jules already exists`,
+    );
   });
 
   it('renders init:repo:failed and stops spinner', () => {
@@ -83,6 +88,8 @@ describe('renderInitEvent', () => {
       ctx,
     );
     expect(logs).toContain('stopSpinner');
-    expect(logs).toContain('error: Repository creation failed: API Error');
+    expect(logs).toContain(
+      `error:   ${ansiRed('✗')} Repository creation failed: API Error`,
+    );
   });
 });

@@ -226,7 +226,7 @@ export async function runInitWizard(
         return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
 
       p.log.info(
-        `Download your private key from: https://github.com/settings/apps/${slug}`,
+        `Download your private key from: ${ansiLink('GitHub App Settings', `https://github.com/settings/apps/${slug}`)}`,
       );
 
       const keyInput = await p.text({
@@ -321,7 +321,7 @@ export async function runInitWizard(
       }
     } else if (!p.isCancel(wantKey) && !wantKey) {
       p.log.info(
-        `💡 You can retrieve or request a Jules API Key at ${ansiLink('https://jules.google.com', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`,
+        `💡 You can retrieve or request a Jules API Key at ${ansiLink('Jules Console', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`,
       );
     }
   } else {

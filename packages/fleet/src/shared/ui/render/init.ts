@@ -14,7 +14,7 @@
 
 import type { InitEvent } from '../../events/init.js';
 import type { RenderContext } from '../spec.js';
-import { ansiLink, ansiGreen, ansiYellow } from '../session-url.js';
+import { ansiLink, ansiGreen, ansiYellow, ansiRed } from '../session-url.js';
 
 /** Render an init-domain event. */
 export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
@@ -75,11 +75,15 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.info(`  ${ansiLink('View Repository', event.url)}`);
       break;
     case 'init:repo:exists':
-      ctx.warn(`  ${ansiYellow('⊘')} Repository ${event.fullName} already exists`);
+      ctx.warn(
+        `  ${ansiYellow('⊘')} Repository ${event.fullName} already exists`,
+      );
       break;
     case 'init:repo:failed':
       ctx.stopSpinner();
-      ctx.error(`Repository creation failed: ${event.reason}`);
+      ctx.error(
+        `  ${ansiRed('✗')} Repository creation failed: ${event.reason}`,
+      );
       break;
   }
 }

@@ -14,7 +14,7 @@
 
 import type { AnalyzeEvent } from '../../events/analyze.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl, ansiLink, ansiDim } from '../session-url.js';
+import { sessionUrl, ansiLink, ansiDim, ansiRed } from '../session-url.js';
 
 /** Render an analyze-domain event. */
 export function renderAnalyzeEvent(
@@ -52,7 +52,7 @@ export function renderAnalyzeEvent(
       break;
     case 'analyze:session:failed':
       ctx.stopSpinner();
-      ctx.error(`  Failed: ${event.error}`);
+      ctx.error(`  ${ansiRed('✗')} Failed: ${event.error}`);
       break;
     case 'analyze:done':
       ctx.success(

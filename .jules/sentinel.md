@@ -1,3 +1,8 @@
+## 2026-07-29 - Robust Activity ID Validation at MCP Entrypoints
+**Vulnerability:** While session IDs and file paths were validated, the `activityId` parameter provided by external clients through the MCP tool was accepted and used down the call stack (e.g. to filter activities) without any sanitization or validation, opening potential injection and path traversal vectors.
+**Learning:** In a monorepo offering multiple protocol layers (like MCP tools), all identifiers supplied by untrusted external agents must be rigorously verified to be flat (no path separators, control characters, or traversal components) before being processed.
+**Prevention:** Implement a reusable, unified validation function (`validateActivityId`) for activity identifiers and strictly apply it to all outer API/tool entrypoints receiving activity references.
+
 ## 2026-07-28 - Unified File Path Validation and Integration in MCP showDiff
 **Vulnerability:** While repository and branch name validations existed, user-supplied relative file path arguments (like the `file` option in the MCP `show_code_diff` tool) were passed to file extraction and diff filtering logic without checks. This opened a potential vector for control character injection, absolute path escapes, and directory traversal (`..`) attempts.
 **Learning:** File paths supplied by untrusted external users/clients (such as through MCP tool execution) represent a major vulnerability surface and must be strictly validated at the outer protocol boundary before being processed.

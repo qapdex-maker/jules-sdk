@@ -138,4 +138,5 @@ export {
   validateRepository,
   validateBranchName,
   validateFilePath,
+  validateActivityId,
 } from './utils/validators.js';

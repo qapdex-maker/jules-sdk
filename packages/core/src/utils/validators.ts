@@ -167,3 +167,34 @@ export function validateFilePath(filePath: string): void {
     throw new Error(`PATH_TRAVERSAL: File path escapes repo root: ${filePath}`);
   }
 }
+
+/**
+ * Validates a given activityId to prevent directory/path traversal, control characters,
+ * and injection risks when interacting with local filesystems, caches, or logs.
+ *
+ * @param activityId - The activity ID to validate.
+ * @throws {Error} If the activity ID is invalid.
+ */
+export function validateActivityId(activityId: string): void {
+  if (!activityId) {
+    throw new Error('INVALID_ACTIVITY_ID: Activity ID cannot be empty');
+  }
+
+  if (activityId.includes('\x00') || /[\x01-\x1f\x7f]/.test(activityId)) {
+    throw new Error(
+      `CONTROL_CHAR: Activity ID contains control characters: ${activityId}`,
+    );
+  }
+
+  if (activityId.includes('/') || activityId.includes('\\')) {
+    throw new Error(
+      `INVALID_ACTIVITY_ID: Activity ID cannot contain slashes or backslashes: ${activityId}`,
+    );
+  }
+
+  if (activityId === '.' || activityId === '..') {
+    throw new Error(
+      `PATH_TRAVERSAL: Activity ID cannot be "." or "..": ${activityId}`,
+    );
+  }
+}

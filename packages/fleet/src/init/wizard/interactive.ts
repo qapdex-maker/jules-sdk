@@ -21,6 +21,7 @@ import { createFleetOctokit } from '../../shared/auth/octokit.js';
 import type { InitArgs, InitWizardResult } from './types.js';
 import { parseFeatureFlags } from './parse-features.js';
 import { ansiLink } from '../../shared/ui/session-url.js';
+import { validateRepository, validateBranchName } from '@google/jules-sdk';
 
 /**
  * Prompts user to choose auth method. Returns null if cancelled.
@@ -70,10 +71,14 @@ export async function runInitWizard(
     if (!confirmed) {
       const manual = await p.text({
         message: 'Enter repository in owner/repo format:',
-        validate: (v) =>
-          !v || !/^[^/]+\/[^/]+$/.test(v)
-            ? 'Must be owner/repo format'
-            : undefined,
+        validate: (v) => {
+          if (!v) return 'Repository is required';
+          try {
+            validateRepository(v);
+          } catch (err: any) {
+            return err.message;
+          }
+        },
       });
       if (p.isCancel(manual))
         return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
@@ -82,20 +87,38 @@ export async function runInitWizard(
   } else {
     const manual = await p.text({
       message: 'Enter repository in owner/repo format:',
-      validate: (v) =>
-        !v || !/^[^/]+\/[^/]+$/.test(v)
-          ? 'Must be owner/repo format'
-          : undefined,
+      validate: (v) => {
+        if (!v) return 'Repository is required';
+        try {
+          validateRepository(v);
+        } catch (err: any) {
+          return err.message;
+        }
+      },
     });
     if (p.isCancel(manual))
       return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
     repoSlug = manual;
   }
 
+  // Validate the final repoSlug to prevent path traversal, control characters, or script injections
+  try {
+    validateRepository(repoSlug);
+  } catch (err: any) {
+    return fail('UNKNOWN_ERROR', err.message, false);
+  }
+
   const [owner, repo] = repoSlug.split('/');
 
   // ── Step 2: Base branch ──
   const baseBranch = args.base ?? 'main';
+
+  // Validate branch name to prevent git reference escapes or shell/command injections
+  try {
+    validateBranchName(baseBranch);
+  } catch (err: any) {
+    return fail('UNKNOWN_ERROR', err.message, false);
+  }
 
   // ── Step 3: Authentication ──
   const { AuthDetectHandler } = await import('../auth-detect/handler.js');
@@ -152,7 +175,14 @@ export async function runInitWizard(
     const fixedRepo = await p.text({
       message: 'Enter the correct repository (owner/repo):',
       initialValue: `${owner}/${repo}`,
-      validate: (v) => (!v?.includes('/') ? 'Format: owner/repo' : undefined),
+      validate: (v) => {
+        if (!v) return 'Repository is required';
+        try {
+          validateRepository(v);
+        } catch (err: any) {
+          return err.message;
+        }
+      },
     });
     if (p.isCancel(fixedRepo))
       return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);

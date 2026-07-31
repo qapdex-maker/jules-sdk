@@ -1,3 +1,8 @@
+## 2026-07-30 - Repository and Branch Name Validation at Fleet CLI Wizard Boundary
+**Vulnerability:** The Fleet CLI initialization wizard (both headless and interactive modes) accepted unvalidated repository names and branch names from CLI arguments, environment variables, git remotes, or prompts. This allowed potential directory traversal, control character injection, or git reference escape attempts when downloading and writing workflow/config files.
+**Learning:** Security validation must not only exist at downstream SDK layers but also be actively integrated at the outermost CLI command and setup wizard layers to sanitise all user/environment-supplied parameters before proceeding.
+**Prevention:** Import and apply central robust validators (`validateRepository` and `validateBranchName`) directly at CLI entrypoint handlers and wizard modules, converting validation exceptions into cleanly formatted CLI failures.
+
 ## 2026-07-29 - Robust Activity ID Validation at MCP Entrypoints
 **Vulnerability:** While session IDs and file paths were validated, the `activityId` parameter provided by external clients through the MCP tool was accepted and used down the call stack (e.g. to filter activities) without any sanitization or validation, opening potential injection and path traversal vectors.
 **Learning:** In a monorepo offering multiple protocol layers (like MCP tools), all identifiers supplied by untrusted external agents must be rigorously verified to be flat (no path separators, control characters, or traversal components) before being processed.
@@ -45,5 +50,5 @@
 
 ## 2026-07-10 - Path Traversal and Local File Inclusion in stage-resolution
 **Vulnerability:** The `stageResolutionHandler` accepted a `fromFile` path parameter to read local files, but did not validate it. Additionally, the existing `validateFilePath` helper only split the path by `/` and checked for `..`, allowing absolute paths like `/etc/passwd` to bypass the relative path check.
-**Learning:** Path bouncers must explicitly reject absolute paths (such as paths starting with `/` or having drive letters on Windows) to prevent traversal via absolute references, even when `..` check is active. Any parameter used in local disk I/O (like `fs.readFileSync`) must be rigorously sanitized.
+**Learning:** Path bouncers must explicitly reject absolute paths (such as paths starting on Windows or having drive letters on Windows) to prevent traversal via absolute references, even when `..` check is active. Any parameter used in local disk I/O (like `fs.readFileSync`) must be rigorously sanitized.
 **Prevention:** Always apply path validation functions to all input file paths and restrict path parameters to relative paths by explicitly throwing on absolute prefixes or drive letters.

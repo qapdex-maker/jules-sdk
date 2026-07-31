@@ -256,4 +256,30 @@ describe('validateHeadlessInputs (Non-Interactive Mode)', () => {
       expect(result.baseBranch).toBe('develop');
     }
   });
+
+  it('fails with invalid repository name (control characters)', async () => {
+    process.env.GITHUB_TOKEN = 'ghp_test';
+    const result = await validateHeadlessInputs(
+      { repo: 'owner/repo\x00invalid' },
+      () => {},
+    );
+    expect('success' in result).toBe(true);
+    if ('success' in result) {
+      expect(result.success).toBe(false);
+      expect(result.error.message).toContain('CONTROL_CHAR');
+    }
+  });
+
+  it('fails with invalid base branch name', async () => {
+    process.env.GITHUB_TOKEN = 'ghp_test';
+    const result = await validateHeadlessInputs(
+      { repo: 'owner/repo', base: 'invalid branch' },
+      () => {},
+    );
+    expect('success' in result).toBe(true);
+    if ('success' in result) {
+      expect(result.success).toBe(false);
+      expect(result.error.message).toContain('Branch name contains spaces');
+    }
+  });
 });

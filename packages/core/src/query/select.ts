@@ -33,28 +33,106 @@ import {
   DEFAULT_SESSION_PROJECTION,
 } from './computed.js';
 
+interface CompiledFilterOp {
+  hasOperators: boolean;
+  exists?: boolean;
+  eq?: any;
+  neq?: any;
+  containsLower?: string;
+  gt?: any;
+  lt?: any;
+  gte?: any;
+  lte?: any;
+  inSet?: Set<any>;
+  directValue?: any;
+}
+
+interface CompiledFieldFilter {
+  key: string;
+  isDot: boolean;
+  pathParts: string[];
+  compiledOp: CompiledFilterOp;
+}
+
 /**
- * Matches a value against a FilterOp.
+ * Compiles a FilterOp into a highly optimized structured representation
+ * to avoid repeated object/array/string operations.
  */
-function match<V>(actual: V, filter?: FilterOp<V>): boolean {
-  if (filter === undefined) return true;
+function compileFilterOp(filter: any): CompiledFilterOp {
+  if (filter === undefined) {
+    return { hasOperators: false };
+  }
   if (typeof filter !== 'object' || filter === null || Array.isArray(filter)) {
-    return actual === filter;
+    return { hasOperators: false, directValue: filter };
   }
 
   const op = filter as {
-    eq?: V;
-    neq?: V;
+    eq?: any;
+    neq?: any;
     contains?: string;
-    gt?: V;
-    lt?: V;
-    gte?: V;
-    lte?: V;
-    in?: V[];
+    gt?: any;
+    lt?: any;
+    gte?: any;
+    lte?: any;
+    in?: any[];
     exists?: boolean;
   };
 
-  // Handle exists operator
+  return {
+    hasOperators: true,
+    exists: op.exists,
+    eq: op.eq,
+    neq: op.neq,
+    containsLower:
+      typeof op.contains === 'string' ? op.contains.toLowerCase() : undefined,
+    gt: op.gt,
+    lt: op.lt,
+    gte: op.gte,
+    lte: op.lte,
+    inSet: Array.isArray(op.in) ? new Set(op.in) : undefined,
+  };
+}
+
+/**
+ * Compiles a full where-clause record into an array of structured field filters,
+ * optionally filtering only dot notation keys or excluding a specific key.
+ */
+function compileWhere(
+  where?: Record<string, FilterOp<unknown>>,
+  onlyDot = false,
+  excludeKey?: string,
+): CompiledFieldFilter[] {
+  if (!where) return [];
+  const compiled: CompiledFieldFilter[] = [];
+  for (const key in where) {
+    if (Object.prototype.hasOwnProperty.call(where, key)) {
+      if (excludeKey && key === excludeKey) continue;
+      const isDot = key.includes('.');
+      if (onlyDot && !isDot) continue;
+      const filter = where[key];
+      const pathParts = isDot ? key.split('.') : [key];
+      compiled.push({
+        key,
+        isDot,
+        pathParts,
+        compiledOp: compileFilterOp(filter),
+      });
+    }
+  }
+  return compiled;
+}
+
+/**
+ * Matches an actual value against a pre-compiled FilterOp.
+ */
+function matchCompiled(actual: any, op: CompiledFilterOp): boolean {
+  if (!op.hasOperators) {
+    if (op.directValue !== undefined) {
+      return actual === op.directValue;
+    }
+    return true;
+  }
+
   if (op.exists !== undefined) {
     const valueExists = actual !== undefined && actual !== null;
     return op.exists ? valueExists : !valueExists;
@@ -63,73 +141,70 @@ function match<V>(actual: V, filter?: FilterOp<V>): boolean {
   if (op.eq !== undefined && actual !== op.eq) return false;
   if (op.neq !== undefined && actual === op.neq) return false;
   if (
-    op.contains !== undefined &&
+    op.containsLower !== undefined &&
     typeof actual === 'string' &&
-    !actual.toLowerCase().includes(op.contains.toLowerCase())
+    !actual.toLowerCase().includes(op.containsLower)
   )
     return false;
   if (op.gt !== undefined && op.gt !== null && actual <= op.gt) return false;
   if (op.gte !== undefined && op.gte !== null && actual < op.gte) return false;
   if (op.lt !== undefined && op.lt !== null && actual >= op.lt) return false;
   if (op.lte !== undefined && op.lte !== null && actual > op.lte) return false;
-  if (op.in !== undefined && !op.in.includes(actual)) return false;
+  if (op.inSet !== undefined && !op.inSet.has(actual)) return false;
 
   return true;
 }
 
 /**
- * Check if a where key uses dot notation (nested path)
+ * Matches a document against an array of pre-compiled field filters.
+ * Replaces Object.entries, recursion, path splits, and .some() closures
+ * with highly performant, non-allocating native loops.
  */
-function isDotPath(key: string): boolean {
-  return key.includes('.');
-}
-
-/**
- * Match a document against a filter using dot notation paths
- * Uses existential quantification for array paths
- */
-function matchPath(
+function matchWhereCompiled(
   doc: unknown,
-  path: string,
-  filter: FilterOp<unknown>,
+  compiledFilters: CompiledFieldFilter[],
 ): boolean {
-  const pathParts = path.split('.');
-  const value = getPath(doc, pathParts);
-
-  // For arrays, use existential matching (ANY element matches)
-  if (Array.isArray(value)) {
-    return value.some((v) => match(v, filter));
+  const len = compiledFilters.length;
+  for (let i = 0; i < len; i++) {
+    const f = compiledFilters[i];
+    if (f.isDot) {
+      const value = getPath(doc, f.pathParts);
+      if (Array.isArray(value)) {
+        let anyMatches = false;
+        const valLen = value.length;
+        for (let j = 0; j < valLen; j++) {
+          if (matchCompiled(value[j], f.compiledOp)) {
+            anyMatches = true;
+            break;
+          }
+        }
+        if (!anyMatches) return false;
+      } else {
+        if (!matchCompiled(value, f.compiledOp)) return false;
+      }
+    } else {
+      const value = (doc as Record<string, unknown>)[f.key];
+      if (!matchCompiled(value, f.compiledOp)) return false;
+    }
   }
-
-  return match(value, filter);
+  return true;
 }
 
 /**
- * Match a document against a full where clause with dot notation support.
- * Uses a standard for...in loop with hasOwnProperty instead of Object.entries
- * to avoid allocating entry arrays on every single document matching call.
+ * Matches a value against a FilterOp (legacy fallback).
+ */
+function match<V>(actual: V, filter?: FilterOp<V>): boolean {
+  return matchCompiled(actual, compileFilterOp(filter));
+}
+
+/**
+ * Match a document against a full where clause (legacy fallback).
  */
 function matchWhere(
   doc: unknown,
   where?: Record<string, FilterOp<unknown>>,
 ): boolean {
-  if (!where) return true;
-
-  for (const key in where) {
-    if (Object.prototype.hasOwnProperty.call(where, key)) {
-      const filter = where[key];
-      if (isDotPath(key)) {
-        // Use path-based matching
-        if (!matchPath(doc, key, filter)) return false;
-      } else {
-        // Use direct field matching
-        const value = (doc as Record<string, unknown>)[key];
-        if (!match(value, filter)) return false;
-      }
-    }
-  }
-
-  return true;
+  return matchWhereCompiled(doc, compileWhere(where));
 }
 
 /**
@@ -214,11 +289,7 @@ export async function select<T extends JulesDomain>(
     const where = query.where as WhereClause<'sessions'> | undefined;
 
     const whereRecord = where as Record<string, FilterOp<unknown>> | undefined;
-    const dotFilters = whereRecord
-      ? Object.entries(whereRecord).filter(([k]) => isDotPath(k))
-      : [];
-    const dotWhere =
-      dotFilters.length > 0 ? Object.fromEntries(dotFilters) : undefined;
+    const compiledDotWhere = compileWhere(whereRecord, true);
 
     let chunk: any[] = [];
     const CHUNK_SIZE = 50;
@@ -241,7 +312,11 @@ export async function select<T extends JulesDomain>(
         if (results.length >= limit) break;
         if (!cached) continue;
 
-        if (dotWhere && !matchWhere(cached.resource, dotWhere)) continue;
+        if (
+          compiledDotWhere.length > 0 &&
+          !matchWhereCompiled(cached.resource, compiledDotWhere)
+        )
+          continue;
 
         const item = applyProjection(
           cached.resource,
@@ -275,16 +350,33 @@ export async function select<T extends JulesDomain>(
         ? (where.search as string).toLowerCase()
         : undefined;
 
+    const compiledIdFilter = where?.id ? compileFilterOp(where.id) : undefined;
+    const compiledStateFilter = where?.state
+      ? compileFilterOp(where.state)
+      : undefined;
+    const compiledTitleFilter = where?.title
+      ? compileFilterOp(where.title)
+      : undefined;
+
     // PASS 1: Index Scan (Metadata Only)
     for await (const entry of storage.scanIndex()) {
       if (results.length >= limit) break;
 
       // Filter by ID
-      if (where?.id && !match(entry.id, where.id)) continue;
+      if (compiledIdFilter && !matchCompiled(entry.id, compiledIdFilter))
+        continue;
       // Filter by State
-      if (where?.state && !match(entry.state, where.state)) continue;
+      if (
+        compiledStateFilter &&
+        !matchCompiled(entry.state, compiledStateFilter)
+      )
+        continue;
       // Filter by Title (Fuzzy Search or specific title)
-      if (where?.title && !match(entry.title, where.title)) continue;
+      if (
+        compiledTitleFilter &&
+        !matchCompiled(entry.title, compiledTitleFilter)
+      )
+        continue;
       // Global Search
       if (searchLower && !entry.title.toLowerCase().includes(searchLower))
         continue;
@@ -294,7 +386,8 @@ export async function select<T extends JulesDomain>(
       // Process chunk if it reaches CHUNK_SIZE or if we have enough items for the limit without dot filters
       if (
         chunk.length >= CHUNK_SIZE ||
-        (!dotWhere && chunk.length >= limit - results.length)
+        (compiledDotWhere.length === 0 &&
+          chunk.length >= limit - results.length)
       ) {
         await processChunk();
       }
@@ -393,11 +486,13 @@ export async function select<T extends JulesDomain>(
       }
     }
 
-    // Optimization: Compute activityWhere outside the loop to avoid redundant operations and GC overhead.
-    const activityWhere = where
-      ? Object.fromEntries(
-          Object.entries(where).filter(([k]) => k !== 'sessionId'),
-        )
+    // Optimization: Pre-compile filters outside of the loop to avoid redundant operations and GC overhead.
+    const compiledActivityWhere = compileWhere(where, false, 'sessionId');
+    const compiledActIdFilter = where?.id
+      ? compileFilterOp(where.id)
+      : undefined;
+    const compiledActTypeFilter = where?.type
+      ? compileFilterOp(where.type)
       : undefined;
 
     const sessionResults = await pMap(
@@ -410,12 +505,24 @@ export async function select<T extends JulesDomain>(
 
         for (const act of localActivities) {
           // Apply standard filters
-          if (where?.id && !match(act.id, where.id)) continue;
-          if (where?.type && !match(act.type, where.type)) continue;
+          if (
+            compiledActIdFilter &&
+            !matchCompiled(act.id, compiledActIdFilter)
+          )
+            continue;
+          if (
+            compiledActTypeFilter &&
+            !matchCompiled(act.type, compiledActTypeFilter)
+          )
+            continue;
 
           // Apply dot-notation filters with existential matching
           // Exclude sessionId from activity-level matching since it's handled by session routing
-          if (!matchWhere(act, activityWhere)) continue;
+          if (
+            compiledActivityWhere.length > 0 &&
+            !matchWhereCompiled(act, compiledActivityWhere)
+          )
+            continue;
 
           const item = applyProjection(
             act,

@@ -43,7 +43,9 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       ctx.startSpinner(`Updating branch for PR #${event.prNumber}…`);
       break;
     case 'merge:branch:updated':
-      ctx.stopSpinner(`Branch updated for PR #${event.prNumber}`);
+      ctx.stopSpinner(
+        `Branch updated for PR #${event.prNumber} ${ansiGreen('✓')}`,
+      );
       break;
     case 'merge:ci:waiting':
       ctx.startSpinner(`Waiting for CI on PR #${event.prNumber}…`);
@@ -61,16 +63,20 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       break;
     }
     case 'merge:ci:passed':
-      ctx.stopSpinner(`CI passed for PR #${event.prNumber}`);
+      ctx.stopSpinner(`CI passed for PR #${event.prNumber} ${ansiGreen('✓')}`);
       break;
     case 'merge:ci:failed':
-      ctx.stopSpinner(`CI failed for PR #${event.prNumber}`);
+      ctx.stopSpinner(`CI failed for PR #${event.prNumber} ${ansiRed('✗')}`);
       break;
     case 'merge:ci:timeout':
-      ctx.stopSpinner(`CI timed out for PR #${event.prNumber}`);
+      ctx.stopSpinner(
+        `CI timed out for PR #${event.prNumber} ${ansiYellow('⊘')}`,
+      );
       break;
     case 'merge:ci:none':
-      ctx.stopSpinner(`No CI checks for PR #${event.prNumber}`);
+      ctx.stopSpinner(
+        `No CI checks for PR #${event.prNumber} ${ansiYellow('⊘')}`,
+      );
       break;
     case 'merge:pr:merging':
       ctx.startSpinner(`Merging PR #${event.prNumber}…`);
@@ -82,7 +88,9 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       ctx.warn(`  ${ansiYellow('⊘')} PR #${event.prNumber}: ${event.reason}`);
       break;
     case 'merge:conflict:detected':
-      ctx.stopSpinner(`Conflict detected on PR #${event.prNumber}`);
+      ctx.stopSpinner(
+        `Conflict detected on PR #${event.prNumber} ${ansiRed('✗')}`,
+      );
       break;
     case 'merge:conflict:escalated':
       ctx.info(
@@ -97,7 +105,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       break;
     case 'merge:conflict:notified':
       ctx.stopSpinner(
-        `Notified session ${event.sessionId} of conflict on PR #${event.prNumber}`,
+        `Notified session ${event.sessionId} of conflict on PR #${event.prNumber} ${ansiGreen('✓')}`,
       );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
@@ -116,7 +124,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       break;
     case 'merge:batch-resolve:done':
       ctx.stopSpinner(
-        `Batch resolved ${event.prNumbers.map((n) => `#${n}`).join(', ')} → session ${event.sessionId}`,
+        `Batch resolved ${event.prNumbers.map((n) => `#${n}`).join(', ')} → session ${event.sessionId} ${ansiGreen('✓')}`,
       );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
@@ -125,7 +133,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       break;
     case 'merge:redispatch:done':
       ctx.stopSpinner(
-        `Re-dispatched PR #${event.oldPr} → session ${event.sessionId}`,
+        `Re-dispatched PR #${event.oldPr} → session ${event.sessionId} ${ansiGreen('✓')}`,
       );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;

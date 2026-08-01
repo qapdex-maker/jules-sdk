@@ -17,3 +17,7 @@ This journal records critical, reusable UX and accessibility insights specific t
 ## 2026-03-12 - Clickable Wizard Hyperlinks and Standardized Failure Indicators
 **Learning:** In interactive CLI applications (such as setup wizards), raw URLs lead to cluttered terminal screens, wrapping issues, and increased cognitive load. Using descriptive, semantic labels for terminal hyperlinks via OSC 8 makes clickable links look clean and highly discoverable. Additionally, standardizing colored failure status indicators (such as a red '✗') across all subcommand error paths provides unified visual scanning and consistency with existing checkmarks ('✓') and warning symbols ('⊘').
 **Action:** Always use semantic labels for `ansiLink` instead of passing raw URLs as labels in CLI prompts, and consistently prepend red '✗' to failure status outputs in terminal render blocks.
+
+## 2026-03-15 - Standardizing CLI Spinner Completion States with Status Symbols
+**Learning:** In terminal UIs, replacing a running spinner with plain-text completion logs lacks immediate, scannable feedback. Appending standardized, color-coded completion status symbols (such as a green '✓' for success, red '✗' for errors/failures, and yellow '⊘' for timeout/skipped states) directly to the stopSpinner message creates a visually cohesive and satisfying experience that is instantly decodable.
+**Action:** Always append standard, colored status indicators (such as `ansiGreen('✓')`, `ansiRed('✗')`, and `ansiYellow('⊘')`) to `ctx.stopSpinner` logs for completed terminal tasks.

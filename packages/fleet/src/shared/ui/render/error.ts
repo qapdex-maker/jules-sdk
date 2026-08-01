@@ -19,6 +19,6 @@ import { ansiHighlight, ansiRed } from '../session-url.js';
 /** Render an error event. */
 export function renderErrorEvent(event: ErrorEvent, ctx: RenderContext): void {
   ctx.stopSpinner();
-  ctx.error(`  ${ansiRed('✗')} [${event.code}] ${event.message}`);
+  ctx.error(`  ${ansiRed('✗')} [${event.code}] ${ansiHighlight(event.message)}`);
   if (event.suggestion) ctx.info(`  💡 ${ansiHighlight(event.suggestion)}`);
 }

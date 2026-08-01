@@ -20,7 +20,7 @@ import { WORKFLOW_TEMPLATES, buildWorkflowTemplates } from '../templates.js';
 import { createFleetOctokit } from '../../shared/auth/octokit.js';
 import type { InitArgs, InitWizardResult } from './types.js';
 import { parseFeatureFlags } from './parse-features.js';
-import { ansiLink } from '../../shared/ui/session-url.js';
+import { ansiLink, ansiHighlight } from '../../shared/ui/session-url.js';
 import { validateRepository, validateBranchName } from '@google/jules-sdk';
 
 /**
@@ -63,7 +63,7 @@ export async function runInitWizard(
 
   if (repoSlug) {
     const confirmed = await p.confirm({
-      message: `Detected repository: ${repoSlug}. Is this correct?`,
+      message: ansiHighlight(`Detected repository: \`${repoSlug}\`. Is this correct?`),
       initialValue: true,
     });
     if (p.isCancel(confirmed))
@@ -154,7 +154,7 @@ export async function runInitWizard(
     } else {
       // Single method detected — confirm
       const useDetected = await p.confirm({
-        message: `Authenticated as ${identity} via ${source} (${method}). Use this?`,
+        message: ansiHighlight(`Authenticated as \`${identity}\` via \`${source}\` (\`${method}\`). Use this?`),
         initialValue: true,
       });
       if (p.isCancel(useDetected))
@@ -212,9 +212,9 @@ export async function runInitWizard(
   } else {
     // Auth detection failed — show why and fall through to manual flow
     if (detectResult.error.code === 'HEALTH_CHECK_FAILED') {
-      p.log.warn(`Auth check failed: ${detectResult.error.message}`);
+      p.log.warn(ansiHighlight(`Auth check failed: ${detectResult.error.message}`));
       if (detectResult.error.suggestion) {
-        p.log.info(detectResult.error.suggestion);
+        p.log.info(ansiHighlight(detectResult.error.suggestion));
       }
     }
 
@@ -280,7 +280,7 @@ export async function runInitWizard(
 
       const s = p.spinner();
       s.start(
-        `Authenticating as "${slug}" and finding installation for ${owner}/${repo}...`,
+        ansiHighlight(`Authenticating as \`${slug}\` and finding installation for \`${owner}/${repo}\`...`),
       );
 
       try {
@@ -305,10 +305,10 @@ export async function runInitWizard(
         );
 
         s.stop(
-          `Authenticated as "${resolved.appName}" (ID: ${resolved.appId})`,
+          ansiHighlight(`Authenticated as \`${resolved.appName}\` (ID: \`${resolved.appId}\`)`),
         );
         p.log.success(
-          `Found installation for ${resolved.accountLogin} (ID: ${resolved.installationId})`,
+          ansiHighlight(`Found installation for \`${resolved.accountLogin}\` (ID: \`${resolved.installationId}\`)`),
         );
 
         process.env.GITHUB_APP_ID = appId;
@@ -339,8 +339,7 @@ export async function runInitWizard(
 
   if (!julesKey) {
     const wantKey = await p.confirm({
-      message:
-        'Fleet needs a JULES_API_KEY to dispatch sessions. Do you have one?',
+      message: ansiHighlight('Fleet needs a `JULES_API_KEY` to dispatch sessions. Do you have one?'),
       initialValue: true,
     });
     if (!p.isCancel(wantKey) && wantKey) {
@@ -351,11 +350,11 @@ export async function runInitWizard(
       }
     } else if (!p.isCancel(wantKey) && !wantKey) {
       p.log.info(
-        `💡 You can retrieve or request a Jules API Key at ${ansiLink('Jules Console', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`,
+        ansiHighlight(`💡 You can retrieve or request a \`JULES_API_KEY\` at ${ansiLink('Jules Console', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`),
       );
     }
   } else {
-    p.log.success('JULES_API_KEY detected');
+    p.log.success(ansiHighlight('`JULES_API_KEY` detected'));
     secretsToUpload['JULES_API_KEY'] = julesKey;
   }
 

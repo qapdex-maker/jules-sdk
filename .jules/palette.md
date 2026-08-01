@@ -21,3 +21,7 @@ This journal records critical, reusable UX and accessibility insights specific t
 ## 2026-03-15 - Standardizing CLI Spinner Completion States with Status Symbols
 **Learning:** In terminal UIs, replacing a running spinner with plain-text completion logs lacks immediate, scannable feedback. Appending standardized, color-coded completion status symbols (such as a green '✓' for success, red '✗' for errors/failures, and yellow '⊘' for timeout/skipped states) directly to the stopSpinner message creates a visually cohesive and satisfying experience that is instantly decodable.
 **Action:** Always append standard, colored status indicators (such as `ansiGreen('✓')`, `ansiRed('✗')`, and `ansiYellow('⊘')`) to `ctx.stopSpinner` logs for completed terminal tasks.
+
+## 2026-03-16 - Unified Backtick Highlighting in CLI Setup Prompts and Status Outputs
+**Learning:** In interactive CLI applications and wizard setups, user-specific variables (such as repository names, auth identities, and secret keys) printed in plain text lack distinct visual separation from instructions. Formatting these variables inside backticks and passing the strings through the `ansiHighlight` utility creates a highly professional, cohesive theme that naturally directs the user's attention to key parameters and command suggestions.
+**Action:** Ensure that user-supplied inputs, paths, or keys in both interactive prompts and domain-specific status event logs (such as skipped/failed reasons) are formatted with backticks and highlighted using `ansiHighlight`.

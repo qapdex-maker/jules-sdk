@@ -2,6 +2,10 @@
 
 ⚡ Focus on measurably speeding up the application. Keep optimizations clean, documented, and non-breaking.
 
+## 2026-04-06 - Batched Index Appends in Bulk Session Upsertion
+**Learning:** Parallelizing individual database or cache writes using `Promise.all` can cause massive lock contention, redundant file system descriptor usage, and I/O bottlenecks when each concurrent task appends independently to a single shared log or index file. Writing individual session state files concurrently preserves atomic I/O performance, while aggregating all metadata entries in memory to execute a single, collective `fs.appendFile` batch operation on the shared index file reduces system call overhead from $O(N)$ to $O(1)$ and guarantees clean write alignment.
+**Action:** Always batch append operations to shared flat files (such as index, registry, or JSONL databases) when performing bulk state operations, while keeping distinct, non-overlapping document-level writes concurrent.
+
 ## 2026-03-30 - Optimized Top-Level Document Projections Fast-Path
 **Learning:** During multi-document database queries, projecting document fields to lightweight subsets (especially default session/activity projections) is extremely frequent. Invoking a generic projection engine that splits paths, scans for wildcards/exclusions, checks nested structures, and deep-clones primitives introduces major redundant CPU and GC overhead. Pre-calculating a boolean flag `isSimpleTopLevel` in a cached query plan can safely bypass the entire heavy projection engine for flat queries.
 **Action:** Always check if a highly repetitive document/object mapping or projection can be pre-calculated and cached. When a selection is strictly simple and flat, implement an O(1) loop copy with direct primitive mapping to achieve up to ~50% CPU performance improvements in hot paths.

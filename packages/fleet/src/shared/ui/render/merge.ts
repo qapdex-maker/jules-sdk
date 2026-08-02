@@ -21,6 +21,7 @@ import {
   ansiRed,
   ansiYellow,
   ansiDim,
+  ansiHighlight,
 } from '../session-url.js';
 
 /** Render a merge-domain event. */
@@ -85,7 +86,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       ctx.stopSpinner(`PR #${event.prNumber} merged ${ansiGreen('✓')}`);
       break;
     case 'merge:pr:skipped':
-      ctx.warn(`  ${ansiYellow('⊘')} PR #${event.prNumber}: ${event.reason}`);
+      ctx.warn(`  ${ansiYellow('⊘')} PR #${event.prNumber}: ${ansiHighlight(event.reason)}`);
       break;
     case 'merge:conflict:detected':
       ctx.stopSpinner(

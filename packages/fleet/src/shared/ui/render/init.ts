@@ -14,7 +14,7 @@
 
 import type { InitEvent } from '../../events/init.js';
 import type { RenderContext } from '../spec.js';
-import { ansiLink, ansiGreen, ansiYellow, ansiRed } from '../session-url.js';
+import { ansiLink, ansiGreen, ansiYellow, ansiRed, ansiHighlight } from '../session-url.js';
 
 /** Render an init-domain event. */
 export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
@@ -32,7 +32,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.info(`  ${ansiGreen('✓')} ${event.path}`);
       break;
     case 'init:file:skipped':
-      ctx.warn(`  ${ansiYellow('⊘')} ${event.path} — ${event.reason}`);
+      ctx.warn(`  ${ansiYellow('⊘')} ${event.path} — ${ansiHighlight(event.reason)}`);
       break;
     case 'init:pr:creating':
       ctx.startSpinner('Creating pull request…');
@@ -58,7 +58,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.stopSpinner(`Secret ${event.name} saved`);
       break;
     case 'init:secret:skipped':
-      ctx.warn(`  ${ansiYellow('⊘')} ${event.name} — ${event.reason}`);
+      ctx.warn(`  ${ansiYellow('⊘')} ${event.name} — ${ansiHighlight(event.reason)}`);
       break;
     case 'init:dry-run':
       ctx.info('Would create:');
@@ -82,7 +82,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
     case 'init:repo:failed':
       ctx.stopSpinner();
       ctx.error(
-        `  ${ansiRed('✗')} Repository creation failed: ${event.reason}`,
+        `  ${ansiRed('✗')} Repository creation failed: ${ansiHighlight(event.reason)}`,
       );
       break;
   }

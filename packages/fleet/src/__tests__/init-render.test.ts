@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderInitEvent } from '../shared/ui/render/init.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { ansiLink, ansiYellow, ansiRed } from '../shared/ui/session-url.js';
+import { ansiLink, ansiYellow, ansiRed, ansiGreen } from '../shared/ui/session-url.js';
 
 describe('renderInitEvent', () => {
   const createMockCtx = () => {
@@ -56,7 +56,7 @@ describe('renderInitEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('stopSpinner: Repository google/jules created');
+    expect(logs).toContain(`stopSpinner: Repository google/jules created ${ansiGreen('✓')}`);
     const expectedLink = ansiLink(
       'View Repository',
       'https://github.com/google/jules',

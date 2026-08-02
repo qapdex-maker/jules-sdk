@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderAnalyzeEvent } from '../shared/ui/render/analyze.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { ansiRed, ansiLink, sessionUrl } from '../shared/ui/session-url.js';
+import { ansiRed, ansiLink, sessionUrl, ansiGreen } from '../shared/ui/session-url.js';
 
 describe('renderAnalyzeEvent', () => {
   const createMockCtx = () => {
@@ -57,7 +57,7 @@ describe('renderAnalyzeEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('stopSpinner: Session started: s-123');
+    expect(logs).toContain(`stopSpinner: Session started: s-123 ${ansiGreen('✓')}`);
     const expectedLink = ansiLink('View Session', sessionUrl('s-123'));
     expect(logs).toContain(`info:   ${expectedLink}`);
   });

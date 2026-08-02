@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderConfigureEvent } from '../shared/ui/render/configure.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { repoConfigUrl, ansiLink } from '../shared/ui/session-url.js';
+import { repoConfigUrl, ansiLink, ansiGreen } from '../shared/ui/session-url.js';
 
 describe('renderConfigureEvent', () => {
   const createMockCtx = () => {
@@ -73,5 +73,17 @@ describe('renderConfigureEvent', () => {
       ctx,
     );
     expect(logs).toContain('success: Configuration complete');
+  });
+
+  it('renders configure:secret:uploaded correctly with green checkmark', () => {
+    const { ctx, logs } = createMockCtx();
+    renderConfigureEvent(
+      {
+        type: 'configure:secret:uploaded',
+        name: 'MY_API_KEY',
+      },
+      ctx,
+    );
+    expect(logs).toContain(`stopSpinner: Secret MY_API_KEY uploaded ${ansiGreen('✓')}`);
   });
 });

@@ -75,30 +75,50 @@ export class DefaultActivityClient implements ActivityClient {
       return activity;
     }
 
-    const hydratedArtifacts = activity.artifacts.map((artifact) => {
-      // If it's already a class instance, we're done.
-      if (artifact instanceof MediaArtifact) return artifact;
-      if (artifact instanceof ChangeSetArtifact) return artifact;
+    // Optimization check: If all artifacts are already rich instances,
+    // bypass mapping, array allocation, and activity shallow cloning entirely.
+    let needsHydration = false;
+    const len = activity.artifacts.length;
+    for (let i = 0; i < len; i++) {
+      const artifact = activity.artifacts[i];
+      if (!(artifact instanceof MediaArtifact) && !(artifact instanceof ChangeSetArtifact)) {
+        needsHydration = true;
+        break;
+      }
+    }
 
-      // It's a plain object from JSON.parse(), so we need to re-hydrate it.
-      // We check for the 'type' property to know which class to use.
+    if (!needsHydration) {
+      return activity;
+    }
+
+    // Use a fast native index-loop to perform mapping, avoiding map closure allocation overhead
+    const hydratedArtifacts = new Array(len);
+    for (let i = 0; i < len; i++) {
+      const artifact = activity.artifacts[i];
+      if (artifact instanceof MediaArtifact || artifact instanceof ChangeSetArtifact) {
+        hydratedArtifacts[i] = artifact;
+        continue;
+      }
+
       switch (artifact.type) {
         case 'changeSet':
           // The raw cached format has artifact.changeSet.gitPatch structure.
           // We need to handle this legacy format gracefully.
           const rawChangeSet = (artifact as any).changeSet || artifact;
-          return new ChangeSetArtifact(
+          hydratedArtifacts[i] = new ChangeSetArtifact(
             rawChangeSet.source,
             rawChangeSet.gitPatch,
           );
+          break;
         case 'media':
           const rawMedia = (artifact as any).media || artifact;
-          return new MediaArtifact(rawMedia, this.platform, activity.id);
+          hydratedArtifacts[i] = new MediaArtifact(rawMedia, this.platform, activity.id);
+          break;
         default:
           // If we don't recognize the type, return it as-is.
-          return artifact as Artifact;
+          hydratedArtifacts[i] = artifact as Artifact;
       }
-    });
+    }
 
     return {
       ...activity,

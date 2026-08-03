@@ -1,3 +1,8 @@
+## 2026-08-01 - Input Validation of Pagination Page Tokens at SDK and MCP Boundaries
+**Vulnerability:** Pagination page tokens passed from external clients or users through the MCP `list_sessions` tool and into the SDK's `SessionCursor` were accepted and used without any format or security validation. This opened potential risks for path/directory traversal, control character injection, or command injection if the tokens were later logged, cached on disk, or passed to downstream scripts/databases.
+**Learning:** Even parameters perceived as internal sequence markers or pagination cursors (like `pageToken`) can originate from untrusted external environments and must be treated as unsafe inputs, requiring strict input sanitisation before being processed.
+**Prevention:** Implement a dedicated, robust page token validator (`validatePageToken`) to reject any tokens containing control characters, path traversals (`.`, `..`), or path separators, and enforce it at both the MCP functional boundaries and the core SDK session pagination classes.
+
 ## 2026-07-30 - Repository and Branch Name Validation at Fleet CLI Wizard Boundary
 **Vulnerability:** The Fleet CLI initialization wizard (both headless and interactive modes) accepted unvalidated repository names and branch names from CLI arguments, environment variables, git remotes, or prompts. This allowed potential directory traversal, control character injection, or git reference escape attempts when downloading and writing workflow/config files.
 **Learning:** Security validation must not only exist at downstream SDK layers but also be actively integrated at the outermost CLI command and setup wizard layers to sanitise all user/environment-supplied parameters before proceeding.

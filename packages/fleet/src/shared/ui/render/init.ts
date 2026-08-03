@@ -26,7 +26,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.startSpinner(`Creating branch ${event.name} from ${event.base}`);
       break;
     case 'init:branch:created':
-      ctx.stopSpinner(`Branch ${event.name} created`);
+      ctx.stopSpinner(`Branch ${event.name} created ${ansiGreen('✓')}`);
       break;
     case 'init:file:committed':
       ctx.info(`  ${ansiGreen('✓')} ${event.path}`);
@@ -38,7 +38,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.startSpinner('Creating pull request…');
       break;
     case 'init:pr:created':
-      ctx.stopSpinner(`PR #${event.number} created`);
+      ctx.stopSpinner(`PR #${event.number} created ${ansiGreen('✓')}`);
       ctx.info(`  ${ansiLink('View Pull Request', event.url)}`);
       break;
     case 'init:done':
@@ -55,7 +55,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.startSpinner(`Uploading secret ${event.name}…`);
       break;
     case 'init:secret:uploaded':
-      ctx.stopSpinner(`Secret ${event.name} saved`);
+      ctx.stopSpinner(`Secret ${event.name} saved ${ansiGreen('✓')}`);
       break;
     case 'init:secret:skipped':
       ctx.warn(`  ${ansiYellow('⊘')} ${event.name} — ${ansiHighlight(event.reason)}`);
@@ -71,7 +71,7 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.startSpinner(`Creating repository ${event.owner}/${event.name}…`);
       break;
     case 'init:repo:created':
-      ctx.stopSpinner(`Repository ${event.fullName} created`);
+      ctx.stopSpinner(`Repository ${event.fullName} created ${ansiGreen('✓')}`);
       ctx.info(`  ${ansiLink('View Repository', event.url)}`);
       break;
     case 'init:repo:exists':

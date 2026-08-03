@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderDispatchEvent } from '../shared/ui/render/dispatch.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { sessionUrl, ansiLink, ansiYellow } from '../shared/ui/session-url.js';
+import { sessionUrl, ansiLink, ansiYellow, ansiGreen } from '../shared/ui/session-url.js';
 
 describe('renderDispatchEvent', () => {
   const createMockCtx = () => {
@@ -68,7 +68,7 @@ describe('renderDispatchEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('stopSpinner: #42 → session session_xyz_789');
+    expect(logs).toContain(`stopSpinner: #42 → session session_xyz_789 ${ansiGreen('✓')}`);
     const expectedLink = ansiLink(
       'View Session',
       sessionUrl('session_xyz_789'),

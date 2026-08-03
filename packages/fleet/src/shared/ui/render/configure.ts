@@ -51,7 +51,7 @@ export function renderConfigureEvent(
       ctx.startSpinner(`Uploading secret ${event.name}…`);
       break;
     case 'configure:secret:uploaded':
-      ctx.stopSpinner(`Secret ${event.name} uploaded`);
+      ctx.stopSpinner(`Secret ${event.name} uploaded ${ansiGreen('✓')}`);
       break;
     case 'configure:done':
       ctx.success('Configuration complete');

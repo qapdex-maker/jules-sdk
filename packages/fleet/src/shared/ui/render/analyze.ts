@@ -14,7 +14,7 @@
 
 import type { AnalyzeEvent } from '../../events/analyze.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl, ansiLink, ansiDim, ansiRed, ansiHighlight } from '../session-url.js';
+import { sessionUrl, ansiLink, ansiDim, ansiRed, ansiHighlight, ansiGreen } from '../session-url.js';
 
 /** Render an analyze-domain event. */
 export function renderAnalyzeEvent(
@@ -47,7 +47,7 @@ export function renderAnalyzeEvent(
       ctx.startSpinner(`Dispatching session for ${event.goal}…`);
       break;
     case 'analyze:session:started':
-      ctx.stopSpinner(`Session started: ${event.id}`);
+      ctx.stopSpinner(`Session started: ${event.id} ${ansiGreen('✓')}`);
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.id))}`);
       break;
     case 'analyze:session:failed':

@@ -14,7 +14,7 @@
 
 import type { DispatchEvent } from '../../events/dispatch.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl, ansiLink, ansiYellow, ansiHighlight } from '../session-url.js';
+import { sessionUrl, ansiLink, ansiYellow, ansiHighlight, ansiGreen } from '../session-url.js';
 
 /** Render a dispatch-domain event. */
 export function renderDispatchEvent(
@@ -29,13 +29,13 @@ export function renderDispatchEvent(
       ctx.startSpinner('Scanning for fleet issues…');
       break;
     case 'dispatch:found':
-      ctx.stopSpinner(`Found ${event.count} undispatched issue(s)`);
+      ctx.stopSpinner(`Found ${event.count} undispatched issue(s) ${ansiGreen('✓')}`);
       break;
     case 'dispatch:issue:dispatching':
       ctx.startSpinner(`#${event.number}: ${event.title}`);
       break;
     case 'dispatch:issue:dispatched':
-      ctx.stopSpinner(`#${event.number} → session ${event.sessionId}`);
+      ctx.stopSpinner(`#${event.number} → session ${event.sessionId} ${ansiGreen('✓')}`);
       ctx.info(
         `  ${ansiLink('View Session', sessionUrl(event.sessionId))}`,
       );

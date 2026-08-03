@@ -52,6 +52,37 @@ export function validateSessionId(sessionId: string): void {
 }
 
 /**
+ * Validates a given pageToken to prevent directory/path traversal, control characters,
+ * and injection risks when interacting with local filesystems, caches, or logs.
+ *
+ * @param pageToken - The page token to validate.
+ * @throws {Error} If the page token is invalid.
+ */
+export function validatePageToken(pageToken: string): void {
+  if (!pageToken) {
+    throw new Error('INVALID_PAGE_TOKEN: Page token cannot be empty');
+  }
+
+  if (pageToken.includes('\x00') || /[\x01-\x1f\x7f]/.test(pageToken)) {
+    throw new Error(
+      `CONTROL_CHAR: Page token contains control characters: ${pageToken}`,
+    );
+  }
+
+  if (pageToken.includes('/') || pageToken.includes('\\')) {
+    throw new Error(
+      `INVALID_PAGE_TOKEN: Page token cannot contain slashes or backslashes: ${pageToken}`,
+    );
+  }
+
+  if (pageToken === '.' || pageToken === '..') {
+    throw new Error(
+      `PATH_TRAVERSAL: Page token cannot be "." or "..": ${pageToken}`,
+    );
+  }
+}
+
+/**
  * Validates a given GitHub repository string to prevent injection and traversal
  * when interacting with downstream filesystems and APIs.
  *

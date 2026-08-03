@@ -21,6 +21,7 @@ import {
   validateBranchName,
   validateFilePath,
   validateActivityId,
+  validatePageToken,
 } from '../../src/utils/validators.js';
 
 describe('validateSessionId', () => {
@@ -229,5 +230,31 @@ describe('validateActivityId', () => {
   test('rejects "." and ".."', () => {
     expect(() => validateActivityId('.')).toThrow('PATH_TRAVERSAL');
     expect(() => validateActivityId('..')).toThrow('PATH_TRAVERSAL');
+  });
+});
+
+describe('validatePageToken', () => {
+  test('allows standard page tokens', () => {
+    expect(() => validatePageToken('1704448500999999000')).not.toThrow();
+    expect(() => validatePageToken('abc-123_xyz')).not.toThrow();
+  });
+
+  test('rejects empty page tokens', () => {
+    expect(() => validatePageToken('')).toThrow('INVALID_PAGE_TOKEN');
+  });
+
+  test('rejects control characters', () => {
+    expect(() => validatePageToken('tok\x00en')).toThrow('CONTROL_CHAR');
+    expect(() => validatePageToken('tok\x1fen')).toThrow('CONTROL_CHAR');
+  });
+
+  test('rejects slashes and backslashes', () => {
+    expect(() => validatePageToken('tok/123')).toThrow('INVALID_PAGE_TOKEN');
+    expect(() => validatePageToken('tok\\123')).toThrow('INVALID_PAGE_TOKEN');
+  });
+
+  test('rejects "." and ".."', () => {
+    expect(() => validatePageToken('.')).toThrow('PATH_TRAVERSAL');
+    expect(() => validatePageToken('..')).toThrow('PATH_TRAVERSAL');
   });
 });

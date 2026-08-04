@@ -208,6 +208,23 @@ function projectArray(
   const len = arr.length;
   const projectedArr = new Array(len);
 
+  // Performance Optimization: If we have a single subpath which is empty (representing the entire element)
+  // and no exclusions, we can bypass the entire property loop, nested path lookups, and allocation of intermediate empty objects.
+  // Instead, we directly deep-clone the element, achieving a massive speedup on full element copies within arrays.
+  const isWholeClone =
+    excludePaths.length === 0 &&
+    subPaths.length === 1 &&
+    subPaths[0].length === 0;
+
+  if (isWholeClone) {
+    for (let i = 0; i < len; i++) {
+      const item = arr[i];
+      projectedArr[i] =
+        item === null || typeof item !== 'object' ? item : deepClone(item);
+    }
+    return projectedArr;
+  }
+
   for (let i = 0; i < len; i++) {
     const item = arr[i];
     if (item === null || typeof item !== 'object') {

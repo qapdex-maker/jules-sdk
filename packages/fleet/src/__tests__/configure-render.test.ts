@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderConfigureEvent } from '../shared/ui/render/configure.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { repoConfigUrl, ansiLink, ansiGreen } from '../shared/ui/session-url.js';
+import { repoConfigUrl, ansiLink, ansiGreen, ansiHighlight } from '../shared/ui/session-url.js';
 
 describe('renderConfigureEvent', () => {
   const createMockCtx = () => {
@@ -61,7 +61,8 @@ describe('renderConfigureEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('info:   ✓ Label "fleet-merge-ready" created');
+    const expectedLabel = ansiHighlight('`fleet-merge-ready`');
+    expect(logs).toContain(`info:   ✓ Label ${expectedLabel} created`);
   });
 
   it('renders configure:done correctly', () => {

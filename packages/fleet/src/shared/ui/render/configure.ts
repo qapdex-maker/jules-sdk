@@ -19,6 +19,7 @@ import {
   ansiLink,
   ansiGreen,
   ansiYellow,
+  ansiHighlight,
 } from '../session-url.js';
 
 /** Render a configure-domain event. */
@@ -36,16 +37,16 @@ export function renderConfigureEvent(
       );
       break;
     case 'configure:label:created':
-      ctx.info(`  ${ansiGreen('✓')} Label "${event.name}" created`);
+      ctx.info(`  ${ansiGreen('✓')} Label ${ansiHighlight(`\`${event.name}\``)} created`);
       break;
     case 'configure:label:exists':
-      ctx.warn(`  ${ansiYellow('⊘')} Label "${event.name}" already exists`);
+      ctx.warn(`  ${ansiYellow('⊘')} Label ${ansiHighlight(`\`${event.name}\``)} already exists`);
       break;
     case 'configure:milestone:created':
-      ctx.info(`  ${ansiGreen('✓')} Milestone "${event.name}" created`);
+      ctx.info(`  ${ansiGreen('✓')} Milestone ${ansiHighlight(`\`${event.name}\``)} created`);
       break;
     case 'configure:milestone:exists':
-      ctx.warn(`  ${ansiYellow('⊘')} Milestone "${event.name}" already exists`);
+      ctx.warn(`  ${ansiYellow('⊘')} Milestone ${ansiHighlight(`\`${event.name}\``)} already exists`);
       break;
     case 'configure:secret:uploading':
       ctx.startSpinner(`Uploading secret ${event.name}…`);

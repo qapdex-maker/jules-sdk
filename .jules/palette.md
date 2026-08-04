@@ -25,3 +25,7 @@ This journal records critical, reusable UX and accessibility insights specific t
 ## 2026-03-16 - Unified Backtick Highlighting in CLI Setup Prompts and Status Outputs
 **Learning:** In interactive CLI applications and wizard setups, user-specific variables (such as repository names, auth identities, and secret keys) printed in plain text lack distinct visual separation from instructions. Formatting these variables inside backticks and passing the strings through the `ansiHighlight` utility creates a highly professional, cohesive theme that naturally directs the user's attention to key parameters and command suggestions.
 **Action:** Ensure that user-supplied inputs, paths, or keys in both interactive prompts and domain-specific status event logs (such as skipped/failed reasons) are formatted with backticks and highlighted using `ansiHighlight`.
+
+## 2026-03-17 - Interactive Password Validation in CLI Setup Wizards
+**Learning:** In interactive setup wizards, missing input validation on password or token prompts allows users to accidentally submit empty or whitespace-only values (e.g., by hitting Enter too quickly). This leads to silent configuration issues or obscure downstream auth errors. Implementing robust inline validation for sensitive password prompts ensures immediate interactive feedback and prevents invalid setups.
+**Action:** Always add inline `validate` check functions to both required and optional password/token prompts in CLI wizard flows to confirm they are non-empty and non-whitespace.

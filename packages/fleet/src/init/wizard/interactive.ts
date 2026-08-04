@@ -63,7 +63,9 @@ export async function runInitWizard(
 
   if (repoSlug) {
     const confirmed = await p.confirm({
-      message: ansiHighlight(`Detected repository: \`${repoSlug}\`. Is this correct?`),
+      message: ansiHighlight(
+        `Detected repository: \`${repoSlug}\`. Is this correct?`,
+      ),
       initialValue: true,
     });
     if (p.isCancel(confirmed))
@@ -154,7 +156,9 @@ export async function runInitWizard(
     } else {
       // Single method detected — confirm
       const useDetected = await p.confirm({
-        message: ansiHighlight(`Authenticated as \`${identity}\` via \`${source}\` (\`${method}\`). Use this?`),
+        message: ansiHighlight(
+          `Authenticated as \`${identity}\` via \`${source}\` (\`${method}\`). Use this?`,
+        ),
         initialValue: true,
       });
       if (p.isCancel(useDetected))
@@ -212,7 +216,9 @@ export async function runInitWizard(
   } else {
     // Auth detection failed — show why and fall through to manual flow
     if (detectResult.error.code === 'HEALTH_CHECK_FAILED') {
-      p.log.warn(ansiHighlight(`Auth check failed: ${detectResult.error.message}`));
+      p.log.warn(
+        ansiHighlight(`Auth check failed: ${detectResult.error.message}`),
+      );
       if (detectResult.error.suggestion) {
         p.log.info(ansiHighlight(detectResult.error.suggestion));
       }
@@ -236,6 +242,7 @@ export async function runInitWizard(
     if (authMethod === 'token') {
       const token = await p.password({
         message: 'Paste your GitHub token:',
+        validate: (v) => (!v?.trim() ? 'GitHub token is required' : undefined),
       });
       if (p.isCancel(token))
         return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
@@ -280,7 +287,9 @@ export async function runInitWizard(
 
       const s = p.spinner();
       s.start(
-        ansiHighlight(`Authenticating as \`${slug}\` and finding installation for \`${owner}/${repo}\`...`),
+        ansiHighlight(
+          `Authenticating as \`${slug}\` and finding installation for \`${owner}/${repo}\`...`,
+        ),
       );
 
       try {
@@ -305,10 +314,14 @@ export async function runInitWizard(
         );
 
         s.stop(
-          ansiHighlight(`Authenticated as \`${resolved.appName}\` (ID: \`${resolved.appId}\`)`),
+          ansiHighlight(
+            `Authenticated as \`${resolved.appName}\` (ID: \`${resolved.appId}\`)`,
+          ),
         );
         p.log.success(
-          ansiHighlight(`Found installation for \`${resolved.accountLogin}\` (ID: \`${resolved.installationId}\`)`),
+          ansiHighlight(
+            `Found installation for \`${resolved.accountLogin}\` (ID: \`${resolved.installationId}\`)`,
+          ),
         );
 
         process.env.GITHUB_APP_ID = appId;
@@ -339,18 +352,25 @@ export async function runInitWizard(
 
   if (!julesKey) {
     const wantKey = await p.confirm({
-      message: ansiHighlight('Fleet needs a `JULES_API_KEY` to dispatch sessions. Do you have one?'),
+      message: ansiHighlight(
+        'Fleet needs a `JULES_API_KEY` to dispatch sessions. Do you have one?',
+      ),
       initialValue: true,
     });
     if (!p.isCancel(wantKey) && wantKey) {
-      const key = await p.password({ message: 'Enter your Jules API key:' });
+      const key = await p.password({
+        message: 'Enter your Jules API key:',
+        validate: (v) => (!v?.trim() ? 'Jules API key is required' : undefined),
+      });
       if (!p.isCancel(key)) {
         process.env.JULES_API_KEY = key;
         secretsToUpload['JULES_API_KEY'] = key;
       }
     } else if (!p.isCancel(wantKey) && !wantKey) {
       p.log.info(
-        ansiHighlight(`💡 You can retrieve or request a \`JULES_API_KEY\` at ${ansiLink('Jules Console', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`),
+        ansiHighlight(
+          `💡 You can retrieve or request a \`JULES_API_KEY\` at ${ansiLink('Jules Console', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`,
+        ),
       );
     }
   } else {

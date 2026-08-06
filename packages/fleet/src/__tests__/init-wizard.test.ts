@@ -14,6 +14,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { validateHeadlessInputs } from '../init/wizard/headless.js';
+import { parseRepositoryInput } from '../init/wizard/interactive.js';
 import type { FleetEvent } from '../shared/events.js';
 
 // Mock getGitRepoInfo to avoid real git calls
@@ -281,5 +282,30 @@ describe('validateHeadlessInputs (Non-Interactive Mode)', () => {
       expect(result.success).toBe(false);
       expect(result.error.message).toContain('Branch name contains spaces');
     }
+  });
+});
+
+describe('parseRepositoryInput (URL Parsing & Sanitization)', () => {
+  it('keeps clean owner/repo format unchanged', () => {
+    expect(parseRepositoryInput('google/jules-sdk')).toBe('google/jules-sdk');
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(parseRepositoryInput('   google/jules-sdk   ')).toBe('google/jules-sdk');
+  });
+
+  it('removes trailing .git extension', () => {
+    expect(parseRepositoryInput('google/jules-sdk.git')).toBe('google/jules-sdk');
+  });
+
+  it('extracts owner/repo from full HTTPS GitHub URLs', () => {
+    expect(parseRepositoryInput('https://github.com/google/jules-sdk')).toBe('google/jules-sdk');
+    expect(parseRepositoryInput('http://github.com/google/jules-sdk')).toBe('google/jules-sdk');
+    expect(parseRepositoryInput('https://github.com/google/jules-sdk.git')).toBe('google/jules-sdk');
+  });
+
+  it('extracts owner/repo from SSH GitHub URLs', () => {
+    expect(parseRepositoryInput('git@github.com:google/jules-sdk.git')).toBe('google/jules-sdk');
+    expect(parseRepositoryInput('git@github.com:google/jules-sdk')).toBe('google/jules-sdk');
   });
 });

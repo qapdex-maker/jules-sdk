@@ -29,3 +29,7 @@ This journal records critical, reusable UX and accessibility insights specific t
 ## 2026-03-17 - Interactive Password Validation in CLI Setup Wizards
 **Learning:** In interactive setup wizards, missing input validation on password or token prompts allows users to accidentally submit empty or whitespace-only values (e.g., by hitting Enter too quickly). This leads to silent configuration issues or obscure downstream auth errors. Implementing robust inline validation for sensitive password prompts ensures immediate interactive feedback and prevents invalid setups.
 **Action:** Always add inline `validate` check functions to both required and optional password/token prompts in CLI wizard flows to confirm they are non-empty and non-whitespace.
+
+## 2026-03-20 - Robust Repository URL Parsing and Placeholders in CLI Prompts
+**Learning:** In interactive CLI setup wizards, users often copy and paste full repository Clone URLs (HTTPS or SSH) instead of typing raw `owner/repo` strings. Failing to parse and sanitize these full URLs leads to immediate and frustrating validation errors, increasing cognitive friction. Implementing a seamless parsing helper to extract standard `owner/repo` slugs and adding clear placeholders in user prompts significantly lowers cognitive load and enhances interactive accessibility.
+**Action:** Always parse and sanitize full repository Clone URLs to extract standard `owner/repo` slugs in CLI input fields, and use clear placeholders on all interactive prompt inputs to guide the user on the expected formats.

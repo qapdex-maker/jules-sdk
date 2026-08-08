@@ -1,3 +1,8 @@
+## 2026-08-02 - Base Branch Validation Gap in Conflict Resolution Scan Handler
+**Vulnerability:** The conflict resolution scan handler (`scanHandler` in `@google/jules-merge`) accepted and processed an optional `base` branch name parameter without validating it. This allowed potential directory traversal, reference escape, or command injection attempts when querying or fetching branches from the GitHub API, especially if the branch name was used in downstream shell operations or local file caching.
+**Learning:** Security parameters that default to safe values (such as `'main'`) are often overlooked during validation updates, but since they can also be overridden by external user/API inputs, they must be validated with the same rigor as other identifiers.
+**Prevention:** Always locate and validate every string-based git reference or branch parameter directly at the entry points of reconciliation handlers using `validateBranchName`.
+
 ## 2026-08-01 - Input Validation of Pagination Page Tokens at SDK and MCP Boundaries
 **Vulnerability:** Pagination page tokens passed from external clients or users through the MCP `list_sessions` tool and into the SDK's `SessionCursor` were accepted and used without any format or security validation. This opened potential risks for path/directory traversal, control character injection, or command injection if the tokens were later logged, cached on disk, or passed to downstream scripts/databases.
 **Learning:** Even parameters perceived as internal sequence markers or pagination cursors (like `pageToken`) can originate from untrusted external environments and must be treated as unsafe inputs, requiring strict input sanitisation before being processed.

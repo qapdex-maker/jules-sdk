@@ -29,3 +29,7 @@ This journal records critical, reusable UX and accessibility insights specific t
 ## 2026-03-17 - Interactive Password Validation in CLI Setup Wizards
 **Learning:** In interactive setup wizards, missing input validation on password or token prompts allows users to accidentally submit empty or whitespace-only values (e.g., by hitting Enter too quickly). This leads to silent configuration issues or obscure downstream auth errors. Implementing robust inline validation for sensitive password prompts ensures immediate interactive feedback and prevents invalid setups.
 **Action:** Always add inline `validate` check functions to both required and optional password/token prompts in CLI wizard flows to confirm they are non-empty and non-whitespace.
+
+## 2026-03-20 - Graceful User Cancellation in CLI Setup Wizards
+**Learning:** In interactive CLI setup wizards, ignoring user cancellations (`Ctrl+C` or `Escape`) on non-essential prompts (such as optional API keys or secret upload confirmations) and carrying on silently with partial/invalid states creates highly frustrating user experiences. Users expect the application to respect cancellation immediately and exit cleanly at any step.
+**Action:** Always check the `p.isCancel` state after every prompt in interactive wizard flows, and return an explicit, descriptive "Setup cancelled" failure rather than silently proceeding to subsequent prompts or using fallback/empty values.

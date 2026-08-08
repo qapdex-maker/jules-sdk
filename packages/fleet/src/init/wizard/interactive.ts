@@ -357,16 +357,20 @@ export async function runInitWizard(
       ),
       initialValue: true,
     });
-    if (!p.isCancel(wantKey) && wantKey) {
+    if (p.isCancel(wantKey)) {
+      return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
+    }
+    if (wantKey) {
       const key = await p.password({
         message: 'Enter your Jules API key:',
         validate: (v) => (!v?.trim() ? 'Jules API key is required' : undefined),
       });
-      if (!p.isCancel(key)) {
-        process.env.JULES_API_KEY = key;
-        secretsToUpload['JULES_API_KEY'] = key;
+      if (p.isCancel(key)) {
+        return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
       }
-    } else if (!p.isCancel(wantKey) && !wantKey) {
+      process.env.JULES_API_KEY = key;
+      secretsToUpload['JULES_API_KEY'] = key;
+    } else {
       p.log.info(
         ansiHighlight(
           `💡 You can retrieve or request a \`JULES_API_KEY\` at ${ansiLink('Jules Console', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`,
@@ -385,7 +389,10 @@ export async function runInitWizard(
       message: `Upload ${Object.keys(secretsToUpload).length} secret(s) to GitHub Actions secrets?`,
       initialValue: true,
     });
-    if (p.isCancel(confirmed) || !confirmed) {
+    if (p.isCancel(confirmed)) {
+      return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
+    }
+    if (!confirmed) {
       Object.keys(secretsToUpload).forEach((k) => delete secretsToUpload[k]);
     }
   }
@@ -396,7 +403,10 @@ export async function runInitWizard(
       message: 'Upload GitHub App credentials to repo secrets?',
       initialValue: true,
     });
-    if (!p.isCancel(uploadApp) && uploadApp) {
+    if (p.isCancel(uploadApp)) {
+      return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
+    }
+    if (uploadApp) {
       if (process.env.GITHUB_APP_ID)
         secretsToUpload['FLEET_APP_ID'] = process.env.GITHUB_APP_ID;
       if (process.env.GITHUB_APP_PRIVATE_KEY_BASE64) {

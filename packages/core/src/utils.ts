@@ -36,65 +36,64 @@ export async function pMap<T, R>(
     delayMs?: number;
   } = {},
 ): Promise<R[]> {
-  const length = items.length;
-
-  // Performance Optimization Fast-Path 1: Empty input list
-  // Instantly return an empty array without allocating anything, bypassing the worker pool entirely.
-  if (length === 0) {
+  const len = items.length;
+  // Performance Optimization: Fast-path for empty collections to avoid any allocation or loop setup.
+  if (len === 0) {
     return [];
   }
 
-  const stopOnError = options.stopOnError ?? true;
   const delayMs = options.delayMs ?? 0;
 
-  // Performance Optimization Fast-Path 2: Single-item input list
-  // Avoids filling arrays, creating microtasks, allocating workers, and Promise.all overhead.
-  if (length === 1) {
-    if (delayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
+  // Performance Optimization: Fast-path for single-item collections with zero delay.
+  // Bypasses worker pool array allocation, iterative while-loop, and Promise.all microtask overhead entirely.
+  if (len === 1 && delayMs === 0) {
     try {
-      const res = await mapper(items[0], 0);
-      return [res];
+      const result = await mapper(items[0], 0);
+      return [result];
     } catch (err) {
+      const stopOnError = options.stopOnError ?? true;
       if (stopOnError) {
         throw err;
       }
-      throw new AggregateError(
-        [err],
-        'Multiple errors occurred during jules.all()',
-      );
+      throw new AggregateError([err], 'Multiple errors occurred during jules.all()');
     }
   }
 
-  // Performance Optimization Fast-Path 3: Limit active worker pool allocation to actual item length.
-  // This eliminates allocating, filling, mapping, and executing redundant worker promises (e.g. concurrency=25 but items=2).
-  const concurrency = Math.min(options.concurrency ?? 3, length);
-  const results = new Array<R>(length);
-  const errors = new Array<Error | unknown>();
+  const concurrency = options.concurrency ?? 3;
+  const stopOnError = options.stopOnError ?? true;
+
+  const results = new Array<R>(len);
+  const errors: (Error | unknown)[] = [];
   let nextIndex = 0;
 
-  const workers = new Array(concurrency).fill(0).map(async () => {
-    while (true) {
-      const index = nextIndex++;
-      if (index >= length) {
-        break;
-      }
-      const item = items[index];
+  // Performance Optimization: Cap worker instantiation count at Math.min(concurrency, items.length).
+  // Eliminates allocating idle/redundant workers and promise overhead when processing smaller collections.
+  const activeWorkersCount = Math.min(concurrency, len);
+  const workers = new Array(activeWorkersCount);
 
-      if (delayMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-      try {
-        results[index] = await mapper(item, index);
-      } catch (err) {
-        if (stopOnError) {
-          throw err;
+  for (let i = 0; i < activeWorkersCount; i++) {
+    workers[i] = (async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= len) {
+          break;
         }
-        errors.push(err);
+        const item = items[index];
+
+        if (delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        try {
+          results[index] = await mapper(item, index);
+        } catch (err) {
+          if (stopOnError) {
+            throw err;
+          }
+          errors.push(err);
+        }
       }
-    }
-  });
+    })();
+  }
 
   await Promise.all(workers);
 

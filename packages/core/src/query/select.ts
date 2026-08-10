@@ -245,27 +245,27 @@ function applyProjection(
 ): Record<string, unknown> {
   const docRecord = doc as Record<string, unknown>;
 
-  // Resolve target selection list (either specified by user or defaults)
-  const targetSelect =
-    select ||
+  // Performance Optimization: If no custom select fields are specified, we default to the standard projection list.
+  // Passing the resolved projection list to the computed fields injector allows bypassing expensive object cloning
+  // and CPU date-parsing operations for computed fields (like durationMs) that are not part of the default projection.
+  const selectFields =
+    select ??
     (domain === 'activities'
       ? DEFAULT_ACTIVITY_PROJECTION
       : DEFAULT_SESSION_PROJECTION);
 
-  // Inject computed fields first, passing the target select list to avoid
-  // redundant calculations and cloning of fields that will be stripped
+  // Inject computed fields first using the target projection list
   const withComputed =
     domain === 'activities'
-      ? injectActivityComputedFields(doc as Activity, targetSelect)
-      : injectSessionComputedFields(docRecord, targetSelect);
+      ? injectActivityComputedFields(doc as Activity, selectFields)
+      : injectSessionComputedFields(docRecord, selectFields);
 
   // If no select specified, use default projection
   if (!select) {
-    const defaults =
-      domain === 'activities'
-        ? DEFAULT_ACTIVITY_PROJECTION
-        : DEFAULT_SESSION_PROJECTION;
-    return projectDocument(withComputed as Record<string, unknown>, defaults);
+    return projectDocument(
+      withComputed as Record<string, unknown>,
+      selectFields,
+    );
   }
 
   // If empty array or contains only '*', return all with computed

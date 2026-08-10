@@ -285,27 +285,36 @@ describe('validateHeadlessInputs (Non-Interactive Mode)', () => {
   });
 });
 
-describe('parseRepositoryInput (URL Parsing & Sanitization)', () => {
-  it('keeps clean owner/repo format unchanged', () => {
-    expect(parseRepositoryInput('google/jules-sdk')).toBe('google/jules-sdk');
+describe('parseRepositoryInput', () => {
+  it('passes standard owner/repo format through unchanged', () => {
+    expect(parseRepositoryInput('google/jules')).toBe('google/jules');
+    expect(parseRepositoryInput('my-org/my-repo_123')).toBe('my-org/my-repo_123');
   });
 
-  it('trims surrounding whitespace', () => {
-    expect(parseRepositoryInput('   google/jules-sdk   ')).toBe('google/jules-sdk');
+  it('trims leading and trailing whitespace', () => {
+    expect(parseRepositoryInput('   google/jules  ')).toBe('google/jules');
   });
 
-  it('removes trailing .git extension', () => {
-    expect(parseRepositoryInput('google/jules-sdk.git')).toBe('google/jules-sdk');
+  it('strips https protocol and github domain', () => {
+    expect(parseRepositoryInput('https://github.com/google/jules')).toBe('google/jules');
+    expect(parseRepositoryInput('http://github.com/google/jules')).toBe('google/jules');
   });
 
-  it('extracts owner/repo from full HTTPS GitHub URLs', () => {
-    expect(parseRepositoryInput('https://github.com/google/jules-sdk')).toBe('google/jules-sdk');
-    expect(parseRepositoryInput('http://github.com/google/jules-sdk')).toBe('google/jules-sdk');
-    expect(parseRepositoryInput('https://github.com/google/jules-sdk.git')).toBe('google/jules-sdk');
+  it('strips www subdomain', () => {
+    expect(parseRepositoryInput('https://www.github.com/google/jules')).toBe('google/jules');
   });
 
-  it('extracts owner/repo from SSH GitHub URLs', () => {
-    expect(parseRepositoryInput('git@github.com:google/jules-sdk.git')).toBe('google/jules-sdk');
-    expect(parseRepositoryInput('git@github.com:google/jules-sdk')).toBe('google/jules-sdk');
+  it('strips trailing .git extension', () => {
+    expect(parseRepositoryInput('google/jules.git')).toBe('google/jules');
+    expect(parseRepositoryInput('https://github.com/google/jules.git')).toBe('google/jules');
+  });
+
+  it('strips ssh prefixes', () => {
+    expect(parseRepositoryInput('git@github.com:google/jules.git')).toBe('google/jules');
+    expect(parseRepositoryInput('git@github.com:google/jules')).toBe('google/jules');
+  });
+
+  it('cleans up extra slashes', () => {
+    expect(parseRepositoryInput('/google/jules/')).toBe('google/jules');
   });
 });

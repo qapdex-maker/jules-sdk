@@ -24,19 +24,19 @@ import { ansiLink, ansiHighlight } from '../../shared/ui/session-url.js';
 import { validateRepository, validateBranchName } from '@google/jules-sdk';
 
 /**
- * Clean up repository inputs by extracting owner/repo from full GitHub HTTPS/SSH URLs,
- * and trimming any whitespace or trailing ".git".
+ * Clean and parse a user-supplied repository input.
+ * Supports pasting full GitHub HTTPS/SSH URLs and extracts the standard owner/repo format.
  */
 export function parseRepositoryInput(input: string): string {
   let cleaned = input.trim();
-  if (cleaned.startsWith('git@github.com:')) {
-    cleaned = cleaned.slice('git@github.com:'.length);
-  } else {
-    cleaned = cleaned.replace(/^https?:\/\/github\.com\//, '');
-  }
-  if (cleaned.endsWith('.git')) {
-    cleaned = cleaned.slice(0, -4);
-  }
+  // Strip protocol and optional www. prefix
+  cleaned = cleaned.replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '');
+  // Strip SSH prefix
+  cleaned = cleaned.replace(/^git@github\.com:/i, '');
+  // Strip trailing .git extension
+  cleaned = cleaned.replace(/\.git$/i, '');
+  // Strip any leading or trailing slashes
+  cleaned = cleaned.replace(/^\/+|\/+$/g, '');
   return cleaned;
 }
 
@@ -90,7 +90,7 @@ export async function runInitWizard(
     if (!confirmed) {
       const manual = await p.text({
         message: 'Enter repository in owner/repo format:',
-        placeholder: 'google/jules-sdk',
+        placeholder: 'e.g., owner/repo',
         validate: (v) => {
           if (!v) return 'Repository is required';
           try {
@@ -107,7 +107,7 @@ export async function runInitWizard(
   } else {
     const manual = await p.text({
       message: 'Enter repository in owner/repo format:',
-      placeholder: 'google/jules-sdk',
+      placeholder: 'e.g., owner/repo',
       validate: (v) => {
         if (!v) return 'Repository is required';
         try {
@@ -195,10 +195,10 @@ export async function runInitWizard(
     p.log.warn(detectResult.error.message);
     p.log.info(`Your credentials are valid — the repo name may be wrong.`);
 
-    const fixedRepo = await p.text({
+    let fixedRepo = await p.text({
       message: 'Enter the correct repository (owner/repo):',
       initialValue: `${owner}/${repo}`,
-      placeholder: 'google/jules-sdk',
+      placeholder: 'e.g., owner/repo',
       validate: (v) => {
         if (!v) return 'Repository is required';
         try {
@@ -211,8 +211,8 @@ export async function runInitWizard(
     if (p.isCancel(fixedRepo))
       return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
 
-    const cleanedFixedRepo = parseRepositoryInput(fixedRepo);
-    const [fixedOwner, fixedRepoName] = cleanedFixedRepo.split('/');
+    fixedRepo = parseRepositoryInput(fixedRepo);
+    const [fixedOwner, fixedRepoName] = fixedRepo.split('/');
 
     // Re-run detection with corrected repo
     const retryResult = await detector.execute({
@@ -278,7 +278,7 @@ export async function runInitWizard(
       const slug = await p.text({
         message:
           'What is your GitHub App slug? (from the URL: github.com/settings/apps/<slug>)',
-        placeholder: 'jules-fleet',
+        placeholder: 'e.g., my-github-app-slug',
         validate: (v) => (!v?.trim() ? 'App slug is required' : undefined),
       });
       if (p.isCancel(slug))
@@ -291,7 +291,7 @@ export async function runInitWizard(
       const keyInput = await p.text({
         message:
           'Path to your private key (.pem file), or paste the key directly:',
-        placeholder: 'path/to/private-key.pem',
+        placeholder: 'e.g., path/to/key.pem or paste the private key block',
         validate: (v) => (!v?.trim() ? 'Private key is required' : undefined),
       });
       if (p.isCancel(keyInput))
@@ -484,7 +484,7 @@ export async function runInitWizard(
       const custom = await p.text({
         message: 'Enter interval in minutes (minimum 5):',
         initialValue: '360',
-        placeholder: '360',
+        placeholder: 'e.g., 60',
         validate: (v) => {
           const n = parseInt(v ?? '', 10);
           if (isNaN(n) || n < 5)

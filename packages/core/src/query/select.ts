@@ -32,6 +32,7 @@ import {
   DEFAULT_ACTIVITY_PROJECTION,
   DEFAULT_SESSION_PROJECTION,
 } from './computed.js';
+import { validateQuery } from './validate.js';
 
 interface CompiledFilterOp {
   hasOperators: boolean;
@@ -244,19 +245,27 @@ function applyProjection(
 ): Record<string, unknown> {
   const docRecord = doc as Record<string, unknown>;
 
-  // Inject computed fields first
+  // Performance Optimization: If no custom select fields are specified, we default to the standard projection list.
+  // Passing the resolved projection list to the computed fields injector allows bypassing expensive object cloning
+  // and CPU date-parsing operations for computed fields (like durationMs) that are not part of the default projection.
+  const selectFields =
+    select ??
+    (domain === 'activities'
+      ? DEFAULT_ACTIVITY_PROJECTION
+      : DEFAULT_SESSION_PROJECTION);
+
+  // Inject computed fields first using the target projection list
   const withComputed =
     domain === 'activities'
-      ? injectActivityComputedFields(doc as Activity, select)
-      : injectSessionComputedFields(docRecord, select);
+      ? injectActivityComputedFields(doc as Activity, selectFields)
+      : injectSessionComputedFields(docRecord, selectFields);
 
   // If no select specified, use default projection
   if (!select) {
-    const defaults =
-      domain === 'activities'
-        ? DEFAULT_ACTIVITY_PROJECTION
-        : DEFAULT_SESSION_PROJECTION;
-    return projectDocument(withComputed as Record<string, unknown>, defaults);
+    return projectDocument(
+      withComputed as Record<string, unknown>,
+      selectFields,
+    );
   }
 
   // If empty array or contains only '*', return all with computed
@@ -281,6 +290,14 @@ export async function select<T extends JulesDomain>(
   client: JulesClient,
   query: JulesQuery<T>,
 ): Promise<QueryResult<T>[]> {
+  const validationResult = validateQuery(query);
+  if (!validationResult.valid) {
+    const messages = validationResult.errors
+      .map((e) => `[${e.code}] ${e.path}: ${e.message}`)
+      .join('; ');
+    throw new Error(`INVALID_QUERY: ${messages}`);
+  }
+
   const storage = client.storage;
   const results: Record<string, unknown>[] = [];
   const limit = query.limit ?? Infinity;

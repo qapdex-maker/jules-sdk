@@ -17,6 +17,12 @@
 /**
  * The internal engine for jules.all()
  *
+ * Highly optimized parallel mapping function with fast-paths.
+ * - O(1) instant return for empty inputs (bypasses all worker allocation/Promise.all overhead).
+ * - O(1) instant return for single-item inputs (bypasses worker allocation, array filling, Promise.all/loops).
+ * - Capped concurrency pool Math.min(concurrency, items.length) to eliminate spawning redundant worker promises
+ *   when concurrency is greater than the item count.
+ *
  * @param items - Data to process
  * @param mapper - Async function (item) => result
  * @param options - Configuration options
@@ -30,9 +36,31 @@ export async function pMap<T, R>(
     delayMs?: number;
   } = {},
 ): Promise<R[]> {
+  const len = items.length;
+  // Performance Optimization: Fast-path for empty collections to avoid any allocation or loop setup.
+  if (len === 0) {
+    return [];
+  }
+
+  const delayMs = options.delayMs ?? 0;
+
+  // Performance Optimization: Fast-path for single-item collections with zero delay.
+  // Bypasses worker pool array allocation, iterative while-loop, and Promise.all microtask overhead entirely.
+  if (len === 1 && delayMs === 0) {
+    try {
+      const result = await mapper(items[0], 0);
+      return [result];
+    } catch (err) {
+      const stopOnError = options.stopOnError ?? true;
+      if (stopOnError) {
+        throw err;
+      }
+      throw new AggregateError([err], 'Multiple errors occurred during jules.all()');
+    }
+  }
+
   const concurrency = options.concurrency ?? 3;
   const stopOnError = options.stopOnError ?? true;
-  const delayMs = options.delayMs ?? 0;
 
   // Optimization: Fast-path for empty array to completely bypass worker allocation and promise chaining.
   if (items.length === 0) {
@@ -72,19 +100,29 @@ export async function pMap<T, R>(
       }
       const item = items[index];
 
-      if (delayMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
-      try {
-        results[index] = await mapper(item, index);
-      } catch (err) {
-        if (stopOnError) {
-          throw err;
+  for (let i = 0; i < activeWorkersCount; i++) {
+    workers[i] = (async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= len) {
+          break;
         }
-        errors.push(err);
+        const item = items[index];
+
+        if (delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        try {
+          results[index] = await mapper(item, index);
+        } catch (err) {
+          if (stopOnError) {
+            throw err;
+          }
+          errors.push(err);
+        }
       }
-    }
-  });
+    })();
+  }
 
   await Promise.all(workers);
 

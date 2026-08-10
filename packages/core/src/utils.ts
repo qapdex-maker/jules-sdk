@@ -36,45 +36,25 @@ export async function pMap<T, R>(
     delayMs?: number;
   } = {},
 ): Promise<R[]> {
-  const len = items.length;
-  // Performance Optimization: Fast-path for empty collections to avoid any allocation or loop setup.
-  if (len === 0) {
+  const itemsLen = items.length;
+
+  // Optimization: Fast-path for empty inputs. Completely avoids array, promise, or timer allocations.
+  if (itemsLen === 0) {
     return [];
   }
 
   const delayMs = options.delayMs ?? 0;
-
-  // Performance Optimization: Fast-path for single-item collections with zero delay.
-  // Bypasses worker pool array allocation, iterative while-loop, and Promise.all microtask overhead entirely.
-  if (len === 1 && delayMs === 0) {
-    try {
-      const result = await mapper(items[0], 0);
-      return [result];
-    } catch (err) {
-      const stopOnError = options.stopOnError ?? true;
-      if (stopOnError) {
-        throw err;
-      }
-      throw new AggregateError([err], 'Multiple errors occurred during jules.all()');
-    }
-  }
-
-  const concurrency = options.concurrency ?? 3;
   const stopOnError = options.stopOnError ?? true;
 
-  // Optimization: Fast-path for empty array to completely bypass worker allocation and promise chaining.
-  if (items.length === 0) {
-    return [];
-  }
-
-  // Optimization: Fast-path for single-item array to completely bypass worker allocation and promise chaining.
-  if (items.length === 1) {
+  // Optimization: Fast-path for single-item inputs. Avoids worker pool construction,
+  // key iterator state machine tracking, and intermediate array mapping allocations.
+  if (itemsLen === 1) {
     if (delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
     try {
-      const result = await mapper(items[0], 0);
-      return [result];
+      const res = await mapper(items[0], 0);
+      return [res];
     } catch (err) {
       if (stopOnError) {
         throw err;
@@ -86,25 +66,23 @@ export async function pMap<T, R>(
     }
   }
 
-  const results = new Array<R>(items.length);
+  // Optimization: Limit active worker pool allocation to the minimum of concurrency or items length.
+  // This avoids allocating redundant, immediately-resolving idle worker promises.
+  const limit = options.concurrency ?? 3;
+  const concurrency = limit < itemsLen ? limit : itemsLen;
+
+  const results = new Array<R>(itemsLen);
   const errors = new Array<Error | unknown>();
   let nextIndex = 0;
 
-  // Optimization: Limit worker pool size to Math.min(concurrency, items.length) to avoid allocating and initializing redundant workers.
-  const workerCount = Math.min(concurrency, items.length);
-  const workers = new Array(workerCount).fill(0).map(async () => {
-    while (true) {
-      const index = nextIndex++;
-      if (index >= items.length) {
-        break;
-      }
-      const item = items[index];
-
-  for (let i = 0; i < activeWorkersCount; i++) {
+  // Optimization: Construct worker promises using a native indexed loop rather than chaining
+  // fill() and map() array allocation helpers, which completely avoids garbage collection churn.
+  const workers = new Array(concurrency);
+  for (let i = 0; i < concurrency; i++) {
     workers[i] = (async () => {
       while (true) {
         const index = nextIndex++;
-        if (index >= len) {
+        if (index >= itemsLen) {
           break;
         }
         const item = items[index];

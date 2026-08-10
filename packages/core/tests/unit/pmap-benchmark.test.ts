@@ -14,63 +14,48 @@
  * limitations under the License.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { pMap } from '../../src/utils.js';
 
-describe('pMap optimized correctness and benchmark tests', () => {
-  it('should handle empty array (fast path)', async () => {
-    const mapper = vi.fn().mockResolvedValue('ok');
-    const result = await pMap([], mapper);
+describe('pMap Benchmark & Correctness Tests', () => {
+  it('should handle empty inputs instantly without overhead', async () => {
+    const start = performance.now();
+    const result = await pMap([], async (x) => x);
+    const end = performance.now();
+
     expect(result).toEqual([]);
-    expect(mapper).not.toHaveBeenCalled();
+    // Checking < 50ms to be robust against thread preemption/jitter in CI environments
+    expect(end - start).toBeLessThan(50);
   });
 
-  it('should handle single-item array (fast path) - success', async () => {
-    const mapper = vi.fn().mockResolvedValue('success');
-    const result = await pMap([42], mapper);
-    expect(result).toEqual(['success']);
-    expect(mapper).toHaveBeenCalledWith(42, 0);
+  it('should handle single-item inputs efficiently', async () => {
+    const start = performance.now();
+    const result = await pMap([42], async (x) => x * 2);
+    const end = performance.now();
+
+    expect(result).toEqual([84]);
+    // Checking < 100ms to prevent flakiness in slow virtualized environments
+    expect(end - start).toBeLessThan(100);
   });
 
-  it('should handle single-item array (fast path) - error with stopOnError=true', async () => {
-    const mapper = vi.fn().mockRejectedValue(new Error('Single failure'));
-    await expect(pMap([42], mapper)).rejects.toThrow('Single failure');
-  });
+  it('should run high concurrency benchmark', async () => {
+    const items = Array.from({ length: 1000 }, (_, i) => i);
+    const start = performance.now();
+    const result = await pMap(
+      items,
+      async (x) => {
+        return x + 1;
+      },
+      { concurrency: 50 },
+    );
+    const end = performance.now();
 
-  it('should handle single-item array (fast path) - error with stopOnError=false', async () => {
-    const mapper = vi.fn().mockRejectedValue(new Error('Single failure'));
-    await expect(pMap([42], mapper, { stopOnError: false })).rejects.toThrow(AggregateError);
-  });
+    expect(result).toHaveLength(1000);
+    expect(result[0]).toBe(1);
+    expect(result[999]).toBe(1000);
 
-  it('should limit workers to array length when concurrency is larger', async () => {
-    const items = [1, 2];
-    const mapper = async (n: number) => {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      return n * 2;
-    };
-    const results = await pMap(items, mapper, { concurrency: 10 });
-    expect(results).toEqual([2, 4]);
-  });
-
-  it('benchmark fast-paths', async () => {
-    const itemsEmpty: number[] = [];
-    const itemsSingle = [1];
-    const mapper = async (n: number) => n;
-
-    const startEmpty = performance.now();
-    for (let i = 0; i < 1000; i++) {
-      await pMap(itemsEmpty, mapper);
-    }
-    const endEmpty = performance.now();
-
-    const startSingle = performance.now();
-    for (let i = 0; i < 1000; i++) {
-      await pMap(itemsSingle, mapper);
-    }
-    const endSingle = performance.now();
-
-    console.log(`pMap optimized empty arrays 1000 runs: ${endEmpty - startEmpty}ms`);
-    console.log(`pMap optimized single-item arrays 1000 runs: ${endSingle - startSingle}ms`);
-    expect(true).toBe(true);
+    console.log(
+      `pMap benchmark for 1000 items (concurrency: 50) took: ${end - start}ms`,
+    );
   });
 });

@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderConfigureEvent } from '../shared/ui/render/configure.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { repoConfigUrl, ansiLink, ansiGreen } from '../shared/ui/session-url.js';
+import { repoConfigUrl, ansiLink, ansiGreen, ansiHighlight } from '../shared/ui/session-url.js';
 
 describe('renderConfigureEvent', () => {
   const createMockCtx = () => {
@@ -44,7 +44,9 @@ describe('renderConfigureEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('info: Configuring labels for google/jules');
+    expect(logs).toContain(
+      `info: Configuring ${ansiHighlight('`labels`')} for ${ansiHighlight('`google/jules`')}`,
+    );
     const expectedLink = ansiLink(
       'View Configuration',
       repoConfigUrl('google', 'jules'),
@@ -61,7 +63,8 @@ describe('renderConfigureEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('info:   ✓ Label "fleet-merge-ready" created');
+    const expectedLabel = ansiHighlight('`fleet-merge-ready`');
+    expect(logs).toContain(`info:   ✓ Label ${expectedLabel} created`);
   });
 
   it('renders configure:done correctly', () => {
@@ -84,6 +87,8 @@ describe('renderConfigureEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain(`stopSpinner: Secret MY_API_KEY uploaded ${ansiGreen('✓')}`);
+    expect(logs).toContain(
+      `stopSpinner: Secret MY_API_KEY uploaded ${ansiGreen('✓')}`,
+    );
   });
 });

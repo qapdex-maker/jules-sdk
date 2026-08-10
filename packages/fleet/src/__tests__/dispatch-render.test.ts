@@ -15,7 +15,13 @@
 import { describe, it, expect } from 'vitest';
 import { renderDispatchEvent } from '../shared/ui/render/dispatch.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { sessionUrl, ansiLink, ansiYellow, ansiGreen } from '../shared/ui/session-url.js';
+import {
+  sessionUrl,
+  ansiLink,
+  ansiYellow,
+  ansiGreen,
+  ansiHighlight,
+} from '../shared/ui/session-url.js';
 
 describe('renderDispatchEvent', () => {
   const createMockCtx = () => {
@@ -42,7 +48,9 @@ describe('renderDispatchEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('info: Dispatching from milestone v1.0');
+    expect(logs).toContain(
+      `info: Dispatching from milestone ${ansiHighlight('`v1.0`')}`,
+    );
   });
 
   it('renders dispatch:issue:skipped with styled yellow warning icon', () => {
@@ -55,7 +63,9 @@ describe('renderDispatchEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain(`warn:   ${ansiYellow('⊘')} #101: Already dispatched`);
+    expect(logs).toContain(
+      `warn:   ${ansiYellow('⊘')} #101: Already dispatched`,
+    );
   });
 
   it('renders dispatch:issue:dispatched with clickable session url', () => {
@@ -68,7 +78,9 @@ describe('renderDispatchEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain(`stopSpinner: #42 → session session_xyz_789 ${ansiGreen('✓')}`);
+    expect(logs).toContain(
+      `stopSpinner: #42 → session session_xyz_789 ${ansiGreen('✓')}`,
+    );
     const expectedLink = ansiLink(
       'View Session',
       sessionUrl('session_xyz_789'),

@@ -15,7 +15,13 @@
 import { describe, it, expect } from 'vitest';
 import { renderAnalyzeEvent } from '../shared/ui/render/analyze.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { ansiRed, ansiLink, sessionUrl, ansiGreen } from '../shared/ui/session-url.js';
+import {
+  ansiRed,
+  ansiLink,
+  sessionUrl,
+  ansiGreen,
+  ansiHighlight,
+} from '../shared/ui/session-url.js';
 
 describe('renderAnalyzeEvent', () => {
   const createMockCtx = () => {
@@ -57,8 +63,41 @@ describe('renderAnalyzeEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain(`stopSpinner: Session started: s-123 ${ansiGreen('✓')}`);
+    expect(logs).toContain(
+      `stopSpinner: Session started: s-123 ${ansiGreen('✓')}`,
+    );
     const expectedLink = ansiLink('View Session', sessionUrl('s-123'));
     expect(logs).toContain(`info:   ${expectedLink}`);
+  });
+
+  it('renders analyze:goal:start with milestone', () => {
+    const { ctx, logs } = createMockCtx();
+    renderAnalyzeEvent(
+      {
+        type: 'analyze:goal:start',
+        file: 'test.md',
+        index: 1,
+        total: 1,
+        milestone: 'v1.0',
+      },
+      ctx,
+    );
+    expect(logs).toContain('step: test.md');
+    expect(logs).toContain(`info:   Milestone: ${ansiHighlight('`v1.0`')}`);
+  });
+
+  it('renders analyze:milestone:resolved correctly', () => {
+    const { ctx, logs } = createMockCtx();
+    renderAnalyzeEvent(
+      {
+        type: 'analyze:milestone:resolved',
+        title: 'v1.0-release',
+        id: 42,
+      },
+      ctx,
+    );
+    expect(logs).toContain(
+      `info:   Milestone ${ansiHighlight('`v1.0-release`')} (#42)`,
+    );
   });
 });

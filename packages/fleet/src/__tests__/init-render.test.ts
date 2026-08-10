@@ -15,7 +15,13 @@
 import { describe, it, expect } from 'vitest';
 import { renderInitEvent } from '../shared/ui/render/init.js';
 import type { RenderContext } from '../shared/ui/spec.js';
-import { ansiLink, ansiYellow, ansiRed, ansiGreen } from '../shared/ui/session-url.js';
+import {
+  ansiLink,
+  ansiYellow,
+  ansiRed,
+  ansiGreen,
+  ansiHighlight,
+} from '../shared/ui/session-url.js';
 
 describe('renderInitEvent', () => {
   const createMockCtx = () => {
@@ -56,7 +62,9 @@ describe('renderInitEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain(`stopSpinner: Repository google/jules created ${ansiGreen('✓')}`);
+    expect(logs).toContain(
+      `stopSpinner: Repository google/jules created ${ansiGreen('✓')}`,
+    );
     const expectedLink = ansiLink(
       'View Repository',
       'https://github.com/google/jules',
@@ -90,6 +98,79 @@ describe('renderInitEvent', () => {
     expect(logs).toContain('stopSpinner');
     expect(logs).toContain(
       `error:   ${ansiRed('✗')} Repository creation failed: API Error`,
+    );
+  });
+
+  it('renders init:start correctly', () => {
+    const { ctx, logs } = createMockCtx();
+    renderInitEvent(
+      {
+        type: 'init:start',
+        owner: 'google',
+        repo: 'jules',
+      },
+      ctx,
+    );
+    expect(logs).toContain(
+      `info: Initializing fleet for ${ansiHighlight('`google/jules`')}`,
+    );
+  });
+
+  it('renders init:branch:creating correctly', () => {
+    const { ctx, logs } = createMockCtx();
+    renderInitEvent(
+      {
+        type: 'init:branch:creating',
+        name: 'fleet-setup',
+        base: 'main',
+      },
+      ctx,
+    );
+    expect(logs).toContain(
+      `startSpinner: Creating branch ${ansiHighlight('`fleet-setup`')} from ${ansiHighlight('`main`')}`,
+    );
+  });
+
+  it('renders init:branch:created correctly', () => {
+    const { ctx, logs } = createMockCtx();
+    renderInitEvent(
+      {
+        type: 'init:branch:created',
+        name: 'fleet-setup',
+      },
+      ctx,
+    );
+    expect(logs).toContain(
+      `stopSpinner: Branch ${ansiHighlight('`fleet-setup`')} created ${ansiGreen('✓')}`,
+    );
+  });
+
+  it('renders init:file:committed correctly', () => {
+    const { ctx, logs } = createMockCtx();
+    renderInitEvent(
+      {
+        type: 'init:file:committed',
+        path: '.fleet/goals/example.md',
+      },
+      ctx,
+    );
+    expect(logs).toContain(
+      `info:   ${ansiGreen('✓')} ${ansiHighlight('`.fleet/goals/example.md`')}`,
+    );
+  });
+
+  it('renders init:file:skipped correctly', () => {
+    const { ctx, logs } = createMockCtx();
+    renderInitEvent(
+      {
+        type: 'init:file:skipped',
+        path: '.fleet/goals/example.md',
+        reason: 'File already exists',
+      },
+      ctx,
+    );
+    expect(logs).toContain(
+      `warn:   ${ansiYellow('⊘')} ${ansiHighlight('`.fleet/goals/example.md`')} — File already exists`,
     );
   });
 });

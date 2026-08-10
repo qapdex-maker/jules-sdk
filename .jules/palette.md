@@ -29,3 +29,7 @@ This journal records critical, reusable UX and accessibility insights specific t
 ## 2026-03-17 - Interactive Password Validation in CLI Setup Wizards
 **Learning:** In interactive setup wizards, missing input validation on password or token prompts allows users to accidentally submit empty or whitespace-only values (e.g., by hitting Enter too quickly). This leads to silent configuration issues or obscure downstream auth errors. Implementing robust inline validation for sensitive password prompts ensures immediate interactive feedback and prevents invalid setups.
 **Action:** Always add inline `validate` check functions to both required and optional password/token prompts in CLI wizard flows to confirm they are non-empty and non-whitespace.
+
+## 2026-03-20 - Backtick Highlighting on Goal Paths and Milestones during Fleet Analysis
+**Learning:** In terminal UIs, displaying goal file paths and milestone names in plain unstyled text blends them into the log message and increases visual clutter. Surrounding file paths and milestone names with backticks and applying the `ansiHighlight` utility creates a strong, consistent visual hierarchy that makes critical targets stand out instantly in interactive terminals.
+**Action:** Always format dynamic file paths, milestones, or user-supplied variables within backticks and pass them through the `ansiHighlight` helper in CLI render outputs.

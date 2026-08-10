@@ -61,4 +61,20 @@ describe('renderAnalyzeEvent', () => {
     const expectedLink = ansiLink('View Session', sessionUrl('s-123'));
     expect(logs).toContain(`info:   ${expectedLink}`);
   });
+
+  it('renders analyze:goal:start with backticks and highlights file and milestone', () => {
+    const { ctx, logs } = createMockCtx();
+    renderAnalyzeEvent(
+      {
+        type: 'analyze:goal:start',
+        file: '.fleet/goals/improve.md',
+        index: 1,
+        total: 2,
+        milestone: 'v1.0',
+      },
+      ctx,
+    );
+    expect(logs.some((l) => l.includes('`.fleet/goals/improve.md`'))).toBe(true);
+    expect(logs.some((l) => l.includes('`v1.0`'))).toBe(true);
+  });
 });

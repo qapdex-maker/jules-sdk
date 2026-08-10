@@ -29,11 +29,15 @@ export function renderAnalyzeEvent(
       break;
     case 'analyze:goal:start':
       if (event.total > 1) {
-        ctx.step(`${ansiDim(`[${event.index}/${event.total}]`)} ${event.file}`);
+        ctx.step(
+          `${ansiDim(`[${event.index}/${event.total}]`)} ${ansiHighlight(`\`${event.file}\``)}`,
+        );
       } else {
-        ctx.step(event.file);
+        ctx.step(ansiHighlight(`\`${event.file}\``));
       }
-      if (event.milestone) ctx.info(`  Milestone: ${event.milestone}`);
+      if (event.milestone) {
+        ctx.info(`  Milestone: ${ansiHighlight(`\`${event.milestone}\``)}`);
+      }
       break;
     case 'analyze:milestone:resolved':
       ctx.info(`  Milestone "${event.title}" (#${event.id})`);

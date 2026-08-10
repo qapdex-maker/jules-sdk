@@ -24,6 +24,23 @@ import { ansiLink, ansiHighlight } from '../../shared/ui/session-url.js';
 import { validateRepository, validateBranchName } from '@google/jules-sdk';
 
 /**
+ * Clean and parse a user-supplied repository input.
+ * Supports pasting full GitHub HTTPS/SSH URLs and extracts the standard owner/repo format.
+ */
+export function parseRepositoryInput(input: string): string {
+  let cleaned = input.trim();
+  // Strip protocol and optional www. prefix
+  cleaned = cleaned.replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '');
+  // Strip SSH prefix
+  cleaned = cleaned.replace(/^git@github\.com:/i, '');
+  // Strip trailing .git extension
+  cleaned = cleaned.replace(/\.git$/i, '');
+  // Strip any leading or trailing slashes
+  cleaned = cleaned.replace(/^\/+|\/+$/g, '');
+  return cleaned;
+}
+
+/**
  * Prompts user to choose auth method. Returns null if cancelled.
  */
 async function promptAuthMethod(): Promise<'token' | 'app' | null> {
@@ -73,10 +90,11 @@ export async function runInitWizard(
     if (!confirmed) {
       const manual = await p.text({
         message: 'Enter repository in owner/repo format:',
+        placeholder: 'e.g., owner/repo',
         validate: (v) => {
           if (!v) return 'Repository is required';
           try {
-            validateRepository(v);
+            validateRepository(parseRepositoryInput(v));
           } catch (err: any) {
             return err.message;
           }
@@ -84,15 +102,16 @@ export async function runInitWizard(
       });
       if (p.isCancel(manual))
         return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
-      repoSlug = manual;
+      repoSlug = parseRepositoryInput(manual);
     }
   } else {
     const manual = await p.text({
       message: 'Enter repository in owner/repo format:',
+      placeholder: 'e.g., owner/repo',
       validate: (v) => {
         if (!v) return 'Repository is required';
         try {
-          validateRepository(v);
+          validateRepository(parseRepositoryInput(v));
         } catch (err: any) {
           return err.message;
         }
@@ -100,7 +119,7 @@ export async function runInitWizard(
     });
     if (p.isCancel(manual))
       return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
-    repoSlug = manual;
+    repoSlug = parseRepositoryInput(manual);
   }
 
   // Validate the final repoSlug to prevent path traversal, control characters, or script injections
@@ -176,13 +195,14 @@ export async function runInitWizard(
     p.log.warn(detectResult.error.message);
     p.log.info(`Your credentials are valid — the repo name may be wrong.`);
 
-    const fixedRepo = await p.text({
+    let fixedRepo = await p.text({
       message: 'Enter the correct repository (owner/repo):',
       initialValue: `${owner}/${repo}`,
+      placeholder: 'e.g., owner/repo',
       validate: (v) => {
         if (!v) return 'Repository is required';
         try {
-          validateRepository(v);
+          validateRepository(parseRepositoryInput(v));
         } catch (err: any) {
           return err.message;
         }
@@ -191,6 +211,7 @@ export async function runInitWizard(
     if (p.isCancel(fixedRepo))
       return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
 
+    fixedRepo = parseRepositoryInput(fixedRepo);
     const [fixedOwner, fixedRepoName] = fixedRepo.split('/');
 
     // Re-run detection with corrected repo
@@ -257,6 +278,7 @@ export async function runInitWizard(
       const slug = await p.text({
         message:
           'What is your GitHub App slug? (from the URL: github.com/settings/apps/<slug>)',
+        placeholder: 'e.g., my-github-app-slug',
         validate: (v) => (!v?.trim() ? 'App slug is required' : undefined),
       });
       if (p.isCancel(slug))
@@ -269,6 +291,7 @@ export async function runInitWizard(
       const keyInput = await p.text({
         message:
           'Path to your private key (.pem file), or paste the key directly:',
+        placeholder: 'e.g., path/to/key.pem or paste the private key block',
         validate: (v) => (!v?.trim() ? 'Private key is required' : undefined),
       });
       if (p.isCancel(keyInput))
@@ -357,16 +380,20 @@ export async function runInitWizard(
       ),
       initialValue: true,
     });
-    if (!p.isCancel(wantKey) && wantKey) {
+    if (p.isCancel(wantKey)) {
+      return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
+    }
+    if (wantKey) {
       const key = await p.password({
         message: 'Enter your Jules API key:',
         validate: (v) => (!v?.trim() ? 'Jules API key is required' : undefined),
       });
-      if (!p.isCancel(key)) {
-        process.env.JULES_API_KEY = key;
-        secretsToUpload['JULES_API_KEY'] = key;
+      if (p.isCancel(key)) {
+        return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
       }
-    } else if (!p.isCancel(wantKey) && !wantKey) {
+      process.env.JULES_API_KEY = key;
+      secretsToUpload['JULES_API_KEY'] = key;
+    } else {
       p.log.info(
         ansiHighlight(
           `💡 You can retrieve or request a \`JULES_API_KEY\` at ${ansiLink('Jules Console', 'https://jules.google.com')}\n   (Setup will complete, but dispatching worker sessions will require it later)`,
@@ -385,7 +412,10 @@ export async function runInitWizard(
       message: `Upload ${Object.keys(secretsToUpload).length} secret(s) to GitHub Actions secrets?`,
       initialValue: true,
     });
-    if (p.isCancel(confirmed) || !confirmed) {
+    if (p.isCancel(confirmed)) {
+      return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
+    }
+    if (!confirmed) {
       Object.keys(secretsToUpload).forEach((k) => delete secretsToUpload[k]);
     }
   }
@@ -396,7 +426,10 @@ export async function runInitWizard(
       message: 'Upload GitHub App credentials to repo secrets?',
       initialValue: true,
     });
-    if (!p.isCancel(uploadApp) && uploadApp) {
+    if (p.isCancel(uploadApp)) {
+      return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
+    }
+    if (uploadApp) {
       if (process.env.GITHUB_APP_ID)
         secretsToUpload['FLEET_APP_ID'] = process.env.GITHUB_APP_ID;
       if (process.env.GITHUB_APP_PRIVATE_KEY_BASE64) {
@@ -451,6 +484,7 @@ export async function runInitWizard(
       const custom = await p.text({
         message: 'Enter interval in minutes (minimum 5):',
         initialValue: '360',
+        placeholder: 'e.g., 60',
         validate: (v) => {
           const n = parseInt(v ?? '', 10);
           if (isNaN(n) || n < 5)

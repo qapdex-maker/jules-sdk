@@ -62,14 +62,43 @@ export async function pMap<T, R>(
   const concurrency = options.concurrency ?? 3;
   const stopOnError = options.stopOnError ?? true;
 
-  const results = new Array<R>(len);
-  const errors: (Error | unknown)[] = [];
+  // Optimization: Fast-path for empty array to completely bypass worker allocation and promise chaining.
+  if (items.length === 0) {
+    return [];
+  }
+
+  // Optimization: Fast-path for single-item array to completely bypass worker allocation and promise chaining.
+  if (items.length === 1) {
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    try {
+      const result = await mapper(items[0], 0);
+      return [result];
+    } catch (err) {
+      if (stopOnError) {
+        throw err;
+      }
+      throw new AggregateError(
+        [err],
+        'Multiple errors occurred during jules.all()',
+      );
+    }
+  }
+
+  const results = new Array<R>(items.length);
+  const errors = new Array<Error | unknown>();
   let nextIndex = 0;
 
-  // Performance Optimization: Cap worker instantiation count at Math.min(concurrency, items.length).
-  // Eliminates allocating idle/redundant workers and promise overhead when processing smaller collections.
-  const activeWorkersCount = Math.min(concurrency, len);
-  const workers = new Array(activeWorkersCount);
+  // Optimization: Limit worker pool size to Math.min(concurrency, items.length) to avoid allocating and initializing redundant workers.
+  const workerCount = Math.min(concurrency, items.length);
+  const workers = new Array(workerCount).fill(0).map(async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) {
+        break;
+      }
+      const item = items[index];
 
   for (let i = 0; i < activeWorkersCount; i++) {
     workers[i] = (async () => {

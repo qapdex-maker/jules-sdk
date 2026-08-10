@@ -235,6 +235,16 @@ describe('critical-paths', () => {
     ).rejects.toThrow();
   });
 
+  it('scanHandler rejects invalid base branch names', async () => {
+    const { scanHandler } = await import('../../reconcile/scan-handler.js');
+    await expect(
+      scanHandler({} as any, { prs: [1], repo: 'owner/repo', base: 'invalid branch' }),
+    ).rejects.toThrow();
+    await expect(
+      scanHandler({} as any, { prs: [1], repo: 'owner/repo', base: 'refs/heads/main' }),
+    ).rejects.toThrow();
+  });
+
   it('getContentsHandler rejects invalid repository names', async () => {
     const { getContentsHandler } = await import('../../reconcile/get-contents-handler.js');
     await expect(

@@ -17,6 +17,12 @@
 /**
  * The internal engine for jules.all()
  *
+ * Highly optimized parallel mapping function with fast-paths.
+ * - O(1) instant return for empty inputs (bypasses all worker allocation/Promise.all overhead).
+ * - O(1) instant return for single-item inputs (bypasses worker allocation, array filling, Promise.all/loops).
+ * - Capped concurrency pool Math.min(concurrency, items.length) to eliminate spawning redundant worker promises
+ *   when concurrency is greater than the item count.
+ *
  * @param items - Data to process
  * @param mapper - Async function (item) => result
  * @param options - Configuration options

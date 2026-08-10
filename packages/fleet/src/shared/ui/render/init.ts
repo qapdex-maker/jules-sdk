@@ -14,25 +14,39 @@
 
 import type { InitEvent } from '../../events/init.js';
 import type { RenderContext } from '../spec.js';
-import { ansiLink, ansiGreen, ansiYellow, ansiRed, ansiHighlight } from '../session-url.js';
+import {
+  ansiLink,
+  ansiGreen,
+  ansiYellow,
+  ansiRed,
+  ansiHighlight,
+} from '../session-url.js';
 
 /** Render an init-domain event. */
 export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
   switch (event.type) {
     case 'init:start':
-      ctx.info(`Initializing fleet for ${event.owner}/${event.repo}`);
+      ctx.info(
+        `Initializing fleet for ${ansiHighlight(`\`${event.owner}/${event.repo}\``)}`,
+      );
       break;
     case 'init:branch:creating':
-      ctx.startSpinner(`Creating branch ${event.name} from ${event.base}`);
+      ctx.startSpinner(
+        `Creating branch ${ansiHighlight(`\`${event.name}\``)} from ${ansiHighlight(`\`${event.base}\``)}`,
+      );
       break;
     case 'init:branch:created':
-      ctx.stopSpinner(`Branch ${event.name} created ${ansiGreen('✓')}`);
+      ctx.stopSpinner(
+        `Branch ${ansiHighlight(`\`${event.name}\``)} created ${ansiGreen('✓')}`,
+      );
       break;
     case 'init:file:committed':
-      ctx.info(`  ${ansiGreen('✓')} ${event.path}`);
+      ctx.info(`  ${ansiGreen('✓')} ${ansiHighlight(`\`${event.path}\``)}`);
       break;
     case 'init:file:skipped':
-      ctx.warn(`  ${ansiYellow('⊘')} ${event.path} — ${ansiHighlight(event.reason)}`);
+      ctx.warn(
+        `  ${ansiYellow('⊘')} ${ansiHighlight(`\`${event.path}\``)} — ${ansiHighlight(event.reason)}`,
+      );
       break;
     case 'init:pr:creating':
       ctx.startSpinner('Creating pull request…');
@@ -58,7 +72,9 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.stopSpinner(`Secret ${event.name} saved ${ansiGreen('✓')}`);
       break;
     case 'init:secret:skipped':
-      ctx.warn(`  ${ansiYellow('⊘')} ${event.name} — ${ansiHighlight(event.reason)}`);
+      ctx.warn(
+        `  ${ansiYellow('⊘')} ${event.name} — ${ansiHighlight(event.reason)}`,
+      );
       break;
     case 'init:dry-run':
       ctx.info('Would create:');

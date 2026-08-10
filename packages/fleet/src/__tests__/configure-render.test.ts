@@ -44,7 +44,9 @@ describe('renderConfigureEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('info: Configuring labels for google/jules');
+    expect(logs).toContain(
+      `info: Configuring ${ansiHighlight('`labels`')} for ${ansiHighlight('`google/jules`')}`,
+    );
     const expectedLink = ansiLink(
       'View Configuration',
       repoConfigUrl('google', 'jules'),
@@ -85,6 +87,8 @@ describe('renderConfigureEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain(`stopSpinner: Secret MY_API_KEY uploaded ${ansiGreen('✓')}`);
+    expect(logs).toContain(
+      `stopSpinner: Secret MY_API_KEY uploaded ${ansiGreen('✓')}`,
+    );
   });
 });

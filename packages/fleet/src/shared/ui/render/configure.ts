@@ -30,7 +30,7 @@ export function renderConfigureEvent(
   switch (event.type) {
     case 'configure:start':
       ctx.info(
-        `Configuring ${event.resource} for ${event.owner}/${event.repo}`,
+        `Configuring ${ansiHighlight(`\`${event.resource}\``)} for ${ansiHighlight(`\`${event.owner}/${event.repo}\``)}`,
       );
       ctx.info(
         `  ${ansiLink('View Configuration', repoConfigUrl(event.owner, event.repo))}`,

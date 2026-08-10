@@ -17,6 +17,12 @@
 /**
  * The internal engine for jules.all()
  *
+ * Highly optimized parallel mapping function with fast-paths.
+ * - O(1) instant return for empty inputs (bypasses all worker allocation/Promise.all overhead).
+ * - O(1) instant return for single-item inputs (bypasses worker allocation, array filling, Promise.all/loops).
+ * - Capped concurrency pool Math.min(concurrency, items.length) to eliminate spawning redundant worker promises
+ *   when concurrency is greater than the item count.
+ *
  * @param items - Data to process
  * @param mapper - Async function (item) => result
  * @param options - Configuration options
@@ -30,18 +36,48 @@ export async function pMap<T, R>(
     delayMs?: number;
   } = {},
 ): Promise<R[]> {
-  const concurrency = options.concurrency ?? 3;
+  const length = items.length;
+
+  // Performance Optimization Fast-Path 1: Empty input list
+  // Instantly return an empty array without allocating anything, bypassing the worker pool entirely.
+  if (length === 0) {
+    return [];
+  }
+
   const stopOnError = options.stopOnError ?? true;
   const delayMs = options.delayMs ?? 0;
 
-  const results = new Array<R>(items.length);
+  // Performance Optimization Fast-Path 2: Single-item input list
+  // Avoids filling arrays, creating microtasks, allocating workers, and Promise.all overhead.
+  if (length === 1) {
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    try {
+      const res = await mapper(items[0], 0);
+      return [res];
+    } catch (err) {
+      if (stopOnError) {
+        throw err;
+      }
+      throw new AggregateError(
+        [err],
+        'Multiple errors occurred during jules.all()',
+      );
+    }
+  }
+
+  // Performance Optimization Fast-Path 3: Limit active worker pool allocation to actual item length.
+  // This eliminates allocating, filling, mapping, and executing redundant worker promises (e.g. concurrency=25 but items=2).
+  const concurrency = Math.min(options.concurrency ?? 3, length);
+  const results = new Array<R>(length);
   const errors = new Array<Error | unknown>();
   let nextIndex = 0;
 
   const workers = new Array(concurrency).fill(0).map(async () => {
     while (true) {
       const index = nextIndex++;
-      if (index >= items.length) {
+      if (index >= length) {
         break;
       }
       const item = items[index];

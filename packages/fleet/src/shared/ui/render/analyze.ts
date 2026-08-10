@@ -14,7 +14,14 @@
 
 import type { AnalyzeEvent } from '../../events/analyze.js';
 import type { RenderContext } from '../spec.js';
-import { sessionUrl, ansiLink, ansiDim, ansiRed, ansiHighlight, ansiGreen } from '../session-url.js';
+import {
+  sessionUrl,
+  ansiLink,
+  ansiDim,
+  ansiRed,
+  ansiHighlight,
+  ansiGreen,
+} from '../session-url.js';
 
 /** Render an analyze-domain event. */
 export function renderAnalyzeEvent(
@@ -33,10 +40,13 @@ export function renderAnalyzeEvent(
       } else {
         ctx.step(event.file);
       }
-      if (event.milestone) ctx.info(`  Milestone: ${event.milestone}`);
+      if (event.milestone)
+        ctx.info(`  Milestone: ${ansiHighlight(`\`${event.milestone}\``)}`);
       break;
     case 'analyze:milestone:resolved':
-      ctx.info(`  Milestone "${event.title}" (#${event.id})`);
+      ctx.info(
+        `  Milestone ${ansiHighlight(`\`${event.title}\``)} (#${event.id})`,
+      );
       break;
     case 'analyze:context:fetched':
       ctx.info(

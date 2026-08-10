@@ -32,6 +32,7 @@ import {
   DEFAULT_ACTIVITY_PROJECTION,
   DEFAULT_SESSION_PROJECTION,
 } from './computed.js';
+import { validateQuery } from './validate.js';
 
 interface CompiledFilterOp {
   hasOperators: boolean;
@@ -281,6 +282,14 @@ export async function select<T extends JulesDomain>(
   client: JulesClient,
   query: JulesQuery<T>,
 ): Promise<QueryResult<T>[]> {
+  const validationResult = validateQuery(query);
+  if (!validationResult.valid) {
+    const messages = validationResult.errors
+      .map((e) => `[${e.code}] ${e.path}: ${e.message}`)
+      .join('; ');
+    throw new Error(`INVALID_QUERY: ${messages}`);
+  }
+
   const storage = client.storage;
   const results: Record<string, unknown>[] = [];
   const limit = query.limit ?? Infinity;

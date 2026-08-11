@@ -50,8 +50,13 @@ async function promptAuthMethod(): Promise<'token' | 'app' | null> {
       {
         value: 'token' as const,
         label: 'Personal Access Token (GITHUB_TOKEN)',
+        hint: 'Quickest setup — best for personal use and testing',
       },
-      { value: 'app' as const, label: 'GitHub App (recommended for orgs)' },
+      {
+        value: 'app' as const,
+        label: 'GitHub App (recommended for orgs)',
+        hint: 'Most secure — ideal for teams, orgs, and enterprise permissions',
+      },
     ],
   });
   if (p.isCancel(authChoice)) return null;
@@ -245,17 +250,8 @@ export async function runInitWizard(
       }
     }
 
-    const authChoice = await p.select({
-      message: 'How will Fleet authenticate with GitHub?',
-      options: [
-        {
-          value: 'token' as const,
-          label: 'Personal Access Token (GITHUB_TOKEN)',
-        },
-        { value: 'app' as const, label: 'GitHub App (recommended for orgs)' },
-      ],
-    });
-    if (p.isCancel(authChoice))
+    const authChoice = await promptAuthMethod();
+    if (!authChoice)
       return fail('UNKNOWN_ERROR', 'Setup cancelled.', false);
     authMethod = authChoice;
 

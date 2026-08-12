@@ -46,6 +46,8 @@ export class NodeFileStorage implements ActivityStorage {
   // Tracks the current file size to calculate offsets for new appends
   private currentFileSize = 0;
 
+  private metadataCache: SessionMetadata | null = null;
+
   constructor(sessionId: string, rootDir: string) {
     validateSessionId(sessionId);
     const cleanId = sessionId.replace(/^sessions\//, '');
@@ -108,23 +110,30 @@ export class NodeFileStorage implements ActivityStorage {
     this.initialized = false;
     this.indexBuilt = false;
     this.index.clear();
+    this.metadataCache = null;
     // We do not await indexBuildPromise as we are closing.
     this.indexBuildPromise = null;
   }
 
   private async _readMetadata(): Promise<SessionMetadata> {
+    if (this.metadataCache) {
+      return this.metadataCache;
+    }
     try {
       const content = await fs.readFile(this.metadataPath, 'utf8');
-      return JSON.parse(content) as SessionMetadata;
+      this.metadataCache = JSON.parse(content) as SessionMetadata;
+      return this.metadataCache;
     } catch (e: any) {
       if (e.code === 'ENOENT') {
-        return { activityCount: 0 }; // Default if file doesn't exist
+        this.metadataCache = { activityCount: 0 };
+        return this.metadataCache;
       }
       throw e;
     }
   }
 
   private async _writeMetadata(metadata: SessionMetadata): Promise<void> {
+    this.metadataCache = metadata;
     await fs.writeFile(
       this.metadataPath,
       JSON.stringify(metadata, null, 2),
@@ -166,6 +175,51 @@ export class NodeFileStorage implements ActivityStorage {
           this.index.set(activity.id, startOffset);
         }
       }
+
+      if (!canContinue) {
+        await new Promise<void>((resolve) =>
+          this.writeStream!.once('drain', resolve),
+        );
+      }
+    } else {
+      throw new Error('NodeFileStorage: WriteStream is not initialized');
+    }
+  }
+
+  /**
+   * Optimized batch appending of multiple activities.
+   * Updates metadata once and writes all activities efficiently.
+   */
+  async appendMany(activities: Activity[]): Promise<void> {
+    if (activities.length === 0) return;
+    if (!this.initialized) await this.init();
+
+    // 1. Atomically update metadata once for the whole batch
+    const metadata = await this._readMetadata();
+    metadata.activityCount += activities.length;
+    await this._writeMetadata(metadata);
+
+    // 2. Append all activities to the stream and update index
+    let lines = '';
+    const startOffset = this.currentFileSize;
+    const isIndexActive = this.indexBuilt || this.indexBuildPromise;
+
+    for (let i = 0; i < activities.length; i++) {
+      const activity = activities[i];
+      const line = JSON.stringify(activity) + '\n';
+
+      if (isIndexActive) {
+        if (!this.index.has(activity.id)) {
+          const offset = startOffset + Buffer.byteLength(lines);
+          this.index.set(activity.id, offset);
+        }
+      }
+      lines += line;
+    }
+
+    if (this.writeStream) {
+      const canContinue = this.writeStream.write(lines);
+      this.currentFileSize += Buffer.byteLength(lines);
 
       if (!canContinue) {
         await new Promise<void>((resolve) =>

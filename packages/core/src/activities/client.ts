@@ -213,6 +213,7 @@ export class DefaultActivityClient implements ActivityClient {
         response.activities.map((activity) => this.storage.get(activity.id)),
       );
 
+      const toAppend: Activity[] = [];
       for (let i = 0; i < response.activities.length; i++) {
         const activity = response.activities[i];
         const existing = existingChecks[i];
@@ -221,9 +222,18 @@ export class DefaultActivityClient implements ActivityClient {
           continue;
         }
 
-        // It's new - append to storage
-        await this.storage.append(activity);
+        toAppend.push(activity);
         count++;
+      }
+
+      if (toAppend.length > 0) {
+        if (typeof this.storage.appendMany === 'function') {
+          await this.storage.appendMany(toAppend);
+        } else {
+          for (let i = 0; i < toAppend.length; i++) {
+            await this.storage.append(toAppend[i]);
+          }
+        }
       }
 
       nextPageToken = response.nextPageToken;

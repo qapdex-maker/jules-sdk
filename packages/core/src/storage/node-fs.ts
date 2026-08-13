@@ -43,6 +43,9 @@ export class NodeFileStorage implements ActivityStorage {
   private indexBuilt = false;
   private indexBuildPromise: Promise<void> | null = null;
 
+  // In-memory cache for session metadata to prevent redundant disk I/O
+  private metadataCache: SessionMetadata | null = null;
+
   // Tracks the current file size to calculate offsets for new appends
   private currentFileSize = 0;
 
@@ -116,9 +119,7 @@ export class NodeFileStorage implements ActivityStorage {
   }
 
   private async _readMetadata(): Promise<SessionMetadata> {
-    if (this.metadataCache) {
-      return this.metadataCache;
-    }
+    if (this.metadataCache) return this.metadataCache;
     try {
       const content = await fs.readFile(this.metadataPath, 'utf8');
       this.metadataCache = JSON.parse(content) as SessionMetadata;
@@ -126,7 +127,7 @@ export class NodeFileStorage implements ActivityStorage {
     } catch (e: any) {
       if (e.code === 'ENOENT') {
         this.metadataCache = { activityCount: 0 };
-        return this.metadataCache;
+        return this.metadataCache; // Default if file doesn't exist
       }
       throw e;
     }
@@ -187,39 +188,42 @@ export class NodeFileStorage implements ActivityStorage {
   }
 
   /**
-   * Optimized batch appending of multiple activities.
-   * Updates metadata once and writes all activities efficiently.
+   * Appends multiple activities in a single optimized operation.
    */
   async appendMany(activities: Activity[]): Promise<void> {
     if (activities.length === 0) return;
     if (!this.initialized) await this.init();
 
-    // 1. Atomically update metadata once for the whole batch
+    // 1. Atomically update metadata once
     const metadata = await this._readMetadata();
     metadata.activityCount += activities.length;
     await this._writeMetadata(metadata);
 
-    // 2. Append all activities to the stream and update index
-    let lines = '';
-    const startOffset = this.currentFileSize;
-    const isIndexActive = this.indexBuilt || this.indexBuildPromise;
+    // 2. Append all activities in a single batch
+    let batchContent = '';
+    const startOffsets = new Array<number>(activities.length);
+    let currentOffset = this.currentFileSize;
 
     for (let i = 0; i < activities.length; i++) {
       const activity = activities[i];
       const line = JSON.stringify(activity) + '\n';
-
-      if (isIndexActive) {
-        if (!this.index.has(activity.id)) {
-          const offset = startOffset + Buffer.byteLength(lines);
-          this.index.set(activity.id, offset);
-        }
-      }
-      lines += line;
+      batchContent += line;
+      startOffsets[i] = currentOffset;
+      currentOffset += Buffer.byteLength(line);
     }
 
     if (this.writeStream) {
-      const canContinue = this.writeStream.write(lines);
-      this.currentFileSize += Buffer.byteLength(lines);
+      const canContinue = this.writeStream.write(batchContent);
+      this.currentFileSize = currentOffset;
+
+      if (this.indexBuilt || this.indexBuildPromise) {
+        for (let i = 0; i < activities.length; i++) {
+          const activity = activities[i];
+          if (!this.index.has(activity.id)) {
+            this.index.set(activity.id, startOffsets[i]);
+          }
+        }
+      }
 
       if (!canContinue) {
         await new Promise<void>((resolve) =>
@@ -566,7 +570,7 @@ export class NodeSessionStorage implements SessionStorage {
           _updatedAt: now,
         };
         indexEntries.push(JSON.stringify(indexEntry) + '\n');
-      })
+      }),
     );
 
     // Single-pass batch append to the high-speed index file

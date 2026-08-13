@@ -68,7 +68,7 @@ export class MemoryStorage implements ActivityStorage {
   }
 
   /**
-   * Optimized batch appending of multiple activities.
+   * Appends multiple activities in a single optimized operation.
    */
   async appendMany(activities: Activity[]): Promise<void> {
     const len = activities.length;

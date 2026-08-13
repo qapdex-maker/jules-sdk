@@ -81,7 +81,10 @@ export class DefaultActivityClient implements ActivityClient {
     const len = activity.artifacts.length;
     for (let i = 0; i < len; i++) {
       const artifact = activity.artifacts[i];
-      if (!(artifact instanceof MediaArtifact) && !(artifact instanceof ChangeSetArtifact)) {
+      if (
+        !(artifact instanceof MediaArtifact) &&
+        !(artifact instanceof ChangeSetArtifact)
+      ) {
         needsHydration = true;
         break;
       }
@@ -95,7 +98,10 @@ export class DefaultActivityClient implements ActivityClient {
     const hydratedArtifacts = new Array(len);
     for (let i = 0; i < len; i++) {
       const artifact = activity.artifacts[i];
-      if (artifact instanceof MediaArtifact || artifact instanceof ChangeSetArtifact) {
+      if (
+        artifact instanceof MediaArtifact ||
+        artifact instanceof ChangeSetArtifact
+      ) {
         hydratedArtifacts[i] = artifact;
         continue;
       }
@@ -112,7 +118,11 @@ export class DefaultActivityClient implements ActivityClient {
           break;
         case 'media':
           const rawMedia = (artifact as any).media || artifact;
-          hydratedArtifacts[i] = new MediaArtifact(rawMedia, this.platform, activity.id);
+          hydratedArtifacts[i] = new MediaArtifact(
+            rawMedia,
+            this.platform,
+            activity.id,
+          );
           break;
         default:
           // If we don't recognize the type, return it as-is.
@@ -213,17 +223,23 @@ export class DefaultActivityClient implements ActivityClient {
         response.activities.map((activity) => this.storage.get(activity.id)),
       );
 
-      const toAppend: Activity[] = [];
+      const newActivities: Activity[] = [];
       for (let i = 0; i < response.activities.length; i++) {
-        const activity = response.activities[i];
-        const existing = existingChecks[i];
-
-        if (existing) {
-          continue;
+        if (!existingChecks[i]) {
+          newActivities.push(response.activities[i]);
         }
+      }
 
-        toAppend.push(activity);
-        count++;
+      if (newActivities.length > 0) {
+        // Optimized: Batch append newly ingested activities in a single O(1) metadata update/stream write.
+        if (typeof (this.storage as any).appendMany === 'function') {
+          await (this.storage as any).appendMany(newActivities);
+        } else {
+          for (let i = 0; i < newActivities.length; i++) {
+            await this.storage.append(newActivities[i]);
+          }
+        }
+        count += newActivities.length;
       }
 
       if (toAppend.length > 0) {

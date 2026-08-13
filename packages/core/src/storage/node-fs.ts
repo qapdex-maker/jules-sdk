@@ -49,8 +49,6 @@ export class NodeFileStorage implements ActivityStorage {
   // Tracks the current file size to calculate offsets for new appends
   private currentFileSize = 0;
 
-  private metadataCache: SessionMetadata | null = null;
-
   constructor(sessionId: string, rootDir: string) {
     validateSessionId(sessionId);
     const cleanId = sessionId.replace(/^sessions\//, '');

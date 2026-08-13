@@ -242,16 +242,6 @@ export class DefaultActivityClient implements ActivityClient {
         count += newActivities.length;
       }
 
-      if (toAppend.length > 0) {
-        if (typeof this.storage.appendMany === 'function') {
-          await this.storage.appendMany(toAppend);
-        } else {
-          for (let i = 0; i < toAppend.length; i++) {
-            await this.storage.append(toAppend[i]);
-          }
-        }
-      }
-
       nextPageToken = response.nextPageToken;
     } while (nextPageToken);
 

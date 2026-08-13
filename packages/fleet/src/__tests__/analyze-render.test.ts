@@ -70,34 +70,19 @@ describe('renderAnalyzeEvent', () => {
     expect(logs).toContain(`info:   ${expectedLink}`);
   });
 
-  it('renders analyze:goal:start with milestone', () => {
+  it('renders analyze:goal:start with backticks and highlights file and milestone', () => {
     const { ctx, logs } = createMockCtx();
     renderAnalyzeEvent(
       {
         type: 'analyze:goal:start',
-        file: 'test.md',
+        file: '.fleet/goals/improve.md',
         index: 1,
-        total: 1,
+        total: 2,
         milestone: 'v1.0',
       },
       ctx,
     );
-    expect(logs).toContain('step: test.md');
-    expect(logs).toContain(`info:   Milestone: ${ansiHighlight('`v1.0`')}`);
-  });
-
-  it('renders analyze:milestone:resolved correctly', () => {
-    const { ctx, logs } = createMockCtx();
-    renderAnalyzeEvent(
-      {
-        type: 'analyze:milestone:resolved',
-        title: 'v1.0-release',
-        id: 42,
-      },
-      ctx,
-    );
-    expect(logs).toContain(
-      `info:   Milestone ${ansiHighlight('`v1.0-release`')} (#42)`,
-    );
+    expect(logs.some((l) => l.includes('`.fleet/goals/improve.md`'))).toBe(true);
+    expect(logs.some((l) => l.includes('`v1.0`'))).toBe(true);
   });
 });

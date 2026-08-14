@@ -49,7 +49,9 @@ describe('renderInitEvent', () => {
       },
       ctx,
     );
-    expect(logs).toContain('startSpinner: Creating repository google/jules…');
+    expect(logs).toContain(
+      `startSpinner: Creating repository ${ansiHighlight('`google/jules`')}…`,
+    );
   });
 
   it('renders init:repo:created correctly with clickable repository url', () => {
@@ -63,7 +65,7 @@ describe('renderInitEvent', () => {
       ctx,
     );
     expect(logs).toContain(
-      `stopSpinner: Repository google/jules created ${ansiGreen('✓')}`,
+      `stopSpinner: Repository ${ansiHighlight('`google/jules`')} created ${ansiGreen('✓')}`,
     );
     const expectedLink = ansiLink(
       'View Repository',
@@ -82,7 +84,7 @@ describe('renderInitEvent', () => {
       ctx,
     );
     expect(logs).toContain(
-      `warn:   ${ansiYellow('⊘')} Repository google/jules already exists`,
+      `warn:   ${ansiYellow('⊘')} Repository ${ansiHighlight('`google/jules`')} already exists`,
     );
   });
 

@@ -320,6 +320,7 @@ export class ChangeSetArtifact {
   public readonly type = 'changeSet' as const;
   public readonly source: string;
   public readonly gitPatch: GitPatch;
+  private _cachedParsed: ParsedChangeSet | null = null;
 
   constructor(source: string, gitPatch: GitPatch) {
     this.source = source;
@@ -334,24 +335,55 @@ export class ChangeSetArtifact {
    * - Determines change type (created/modified/deleted) from /dev/null markers.
    * - Counts additions (+) and deletions (-) in hunks.
    *
+   * **Performance Optimization:**
+   * - Lazy memoization caches parsed result on `_cachedParsed` to convert repeated
+   *   `parsed()` calls from O(N) diff parsing to O(1) instant returns.
+   * - Summary categorization uses a single native indexed loop instead of 3 sequential `.filter()`
+   *   scans, avoiding array allocations and reducing loop passes from 3 to 1.
+   *
    * @returns Parsed diff with file paths, change types, and line counts.
    */
   parsed(): ParsedChangeSet {
+    if (this._cachedParsed) {
+      return this._cachedParsed;
+    }
+
     if (!this.gitPatch?.unidiffPatch) {
-      return {
+      this._cachedParsed = {
         files: [],
         summary: { totalFiles: 0, created: 0, modified: 0, deleted: 0 },
       };
+      return this._cachedParsed;
     }
-    const files = parseUnidiff(this.gitPatch.unidiffPatch);
 
-    const summary = {
-      totalFiles: files.length,
-      created: files.filter((f) => f.changeType === 'created').length,
-      modified: files.filter((f) => f.changeType === 'modified').length,
-      deleted: files.filter((f) => f.changeType === 'deleted').length,
+    const files = parseUnidiff(this.gitPatch.unidiffPatch);
+    const totalFiles = files.length;
+
+    let created = 0;
+    let modified = 0;
+    let deleted = 0;
+
+    for (let i = 0; i < totalFiles; i++) {
+      const type = files[i].changeType;
+      if (type === 'created') {
+        created++;
+      } else if (type === 'modified') {
+        modified++;
+      } else if (type === 'deleted') {
+        deleted++;
+      }
+    }
+
+    this._cachedParsed = {
+      files,
+      summary: {
+        totalFiles,
+        created,
+        modified,
+        deleted,
+      },
     };
 
-    return { files, summary };
+    return this._cachedParsed;
   }
 }

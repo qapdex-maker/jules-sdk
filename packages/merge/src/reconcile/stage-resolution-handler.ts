@@ -17,7 +17,7 @@ import {
   StageResolutionOutputSchema,
 } from './schemas.js';
 import { readManifest, writeManifest } from './manifest.js';
-import { validateFilePath } from '../shared/validators.js';
+import { validateBranchName, validateFilePath } from '../shared/validators.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import { z } from 'zod';
@@ -41,6 +41,9 @@ export async function stageResolutionHandler(rawInput: unknown) {
   validateFilePath(input.filePath);
   if (input.fromFile) {
     validateFilePath(input.fromFile);
+  }
+  for (const parent of input.parents) {
+    validateBranchName(parent);
   }
   const fileContent = resolveFileContent(input);
 

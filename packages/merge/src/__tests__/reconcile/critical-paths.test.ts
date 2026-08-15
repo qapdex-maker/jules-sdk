@@ -151,6 +151,50 @@ describe('critical-paths', () => {
     ).rejects.toThrow('ABSOLUTE_PATH');
   });
 
+  it('stageResolutionHandler rejects invalid parent references', async () => {
+    const { scanHandler } = await import('../../reconcile/scan-handler.js');
+    const { stageResolutionHandler } = await import(
+      '../../reconcile/stage-resolution-handler.js'
+    );
+
+    await scanHandler({} as any, {
+      prs: [10, 11],
+      repo: 'owner/repo',
+    });
+
+    await expect(
+      stageResolutionHandler({
+        filePath: 'src/config.ts',
+        parents: ['refs/heads/main', '10'],
+        content: 'resolved content',
+      }),
+    ).rejects.toThrow('RESERVED_BRANCH');
+
+    await expect(
+      stageResolutionHandler({
+        filePath: 'src/config.ts',
+        parents: ['main space', '10'],
+        content: 'resolved content',
+      }),
+    ).rejects.toThrow('Branch name contains spaces');
+
+    await expect(
+      stageResolutionHandler({
+        filePath: 'src/config.ts',
+        parents: ['main..branch', '10'],
+        content: 'resolved content',
+      }),
+    ).rejects.toThrow('Branch name contains consecutive dots');
+
+    await expect(
+      stageResolutionHandler({
+        filePath: 'src/config.ts',
+        parents: ['main.lock', '10'],
+        content: 'resolved content',
+      }),
+    ).rejects.toThrow('INVALID_BRANCH');
+  });
+
   it('rejects file paths with control characters', async () => {
     const { validateFilePath } = await import('../../shared/validators.js');
     expect(() => validateFilePath('src/foo\x00.ts')).toThrow('CONTROL_CHAR');

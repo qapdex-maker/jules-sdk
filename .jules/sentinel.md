@@ -1,3 +1,8 @@
+## 2026-08-15 - Branch/Parent Validation on Reconciliation Staging
+**Vulnerability:** The stage resolution handler (`stageResolutionHandler`) in `@google/jules-merge` accepted parent branch, commit, or PR identifier strings in the `parents` array without validating them against branch naming rules. If an attacker supplied parent strings containing spaces, control characters, consecutive dots, or `refs/` prefixes, it could allow git reference escape, format bypass, or script/command injection during downstream git commit/ref creation.
+**Learning:** Any array input representing Git branch or reference identifiers must be validated at the entrypoint before being stored in state or passed to downstream Git operations.
+**Prevention:** Iteratively invoke standard branch validators (`validateBranchName`) on all elements of array parameter inputs (such as `parents`) before performing staging or manifest persistence operations.
+
 ## 2026-08-11 - Defense-in-depth Query Validation at MCP select Boundary
 **Vulnerability:** The MCP `select` function passed incoming JQL queries directly to the SDK selection engine without validating the query's schema, structure, or parameters at the outermost protocol/package boundary. While the SDK itself validates queries, bypassing outer validation can expose the system to unexpected query engine behavior or unhandled schema exceptions if downstream validation is changed, mocked, or bypassed.
 **Learning:** A secure architecture enforces multiple layers of protection (defense-in-depth). Input sanitization and validation must occur at every package, CLI, and protocol boundary to prevent assumptions about downstream state and block malicious inputs as early as possible.

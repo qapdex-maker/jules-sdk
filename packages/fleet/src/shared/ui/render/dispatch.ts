@@ -46,7 +46,7 @@ export function renderDispatchEvent(
       break;
     case 'dispatch:issue:dispatched':
       ctx.stopSpinner(
-        `#${event.number} → session ${event.sessionId} ${ansiGreen('✓')}`,
+        `#${event.number} → session ${ansiHighlight(`\`${event.sessionId}\``)} ${ansiGreen('✓')}`,
       );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;

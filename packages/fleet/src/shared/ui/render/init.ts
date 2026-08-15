@@ -84,15 +84,19 @@ export function renderInitEvent(event: InitEvent, ctx: RenderContext): void {
       ctx.warn('Repository is already initialized');
       break;
     case 'init:repo:creating':
-      ctx.startSpinner(`Creating repository ${event.owner}/${event.name}…`);
+      ctx.startSpinner(
+        `Creating repository ${ansiHighlight(`\`${event.owner}/${event.name}\``)}…`,
+      );
       break;
     case 'init:repo:created':
-      ctx.stopSpinner(`Repository ${event.fullName} created ${ansiGreen('✓')}`);
+      ctx.stopSpinner(
+        `Repository ${ansiHighlight(`\`${event.fullName}\``)} created ${ansiGreen('✓')}`,
+      );
       ctx.info(`  ${ansiLink('View Repository', event.url)}`);
       break;
     case 'init:repo:exists':
       ctx.warn(
-        `  ${ansiYellow('⊘')} Repository ${event.fullName} already exists`,
+        `  ${ansiYellow('⊘')} Repository ${ansiHighlight(`\`${event.fullName}\``)} already exists`,
       );
       break;
     case 'init:repo:failed':

@@ -37,3 +37,7 @@ This journal records critical, reusable UX and accessibility insights specific t
 ## 2026-08-11 - Descriptive Option Hints in Interactive CLI Wizards
 **Learning:** Selecting from multiple options in interactive CLI setup prompts (like choosing between GitHub PAT or App authentication) can be ambiguous or daunting for users who do not know the exact trade-offs of each option. Adding descriptive `hint` properties to selection options provides key contextual guidance that helps users make informed choices, while refactoring duplicate select blocks to reuse helper prompt functions ensures consistency across all Wizard flows.
 **Action:** Always provide descriptive and highly informative `hint` messages for selection list options in interactive wizard prompts, and reuse core prompt functions to keep setup CLI interfaces unified and modular.
+
+## 2026-08-12 - Backtick Highlighting for Dynamic Repository Names in Creation Logs
+**Learning:** Rendering raw repository slugs (such as `owner/repo`) in dynamic CLI creation event logs without formatting causes them to blend in with adjacent static log text. Formatting repository names in backticks and applying `ansiHighlight` creates visual separation and visual consistency across all CLI subcommands and setup steps.
+**Action:** Always format repository slugs and dynamic resource identifiers in backticks and wrap them with `ansiHighlight` across all CLI event renderers.

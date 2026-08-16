@@ -1,3 +1,8 @@
+## 2026-08-18 - Input Validation on Fleet Dispatch Handler Entrypoint
+**Vulnerability:** The Fleet `DispatchHandler` accepted repository owner/repo, base branch, and goals directory path inputs directly from callers or CLI flags without validation. Unsanitized inputs containing control characters, path traversals (`..`), or Git reference escapes (`refs/`) could lead to unsafe filesystem access during goal file scanning or Git reference escape during session dispatch.
+**Learning:** Outer orchestration boundaries and CLI handler classes (like `DispatchHandler`) must defensively validate all input arguments using standard validation functions (`validateRepository`, `validateBranchName`, `validateFilePath`) before invoking filesystem operations or external session dispatchers.
+**Prevention:** Always invoke input validators (`validateRepository`, `validateBranchName`, `validateFilePath`) at the start of execution handlers in orchestration packages before reading goal directories or dispatching remote worker sessions.
+
 ## 2026-08-15 - Branch/Parent Validation on Reconciliation Staging
 **Vulnerability:** The stage resolution handler (`stageResolutionHandler`) in `@google/jules-merge` accepted parent branch, commit, or PR identifier strings in the `parents` array without validating them against branch naming rules. If an attacker supplied parent strings containing spaces, control characters, consecutive dots, or `refs/` prefixes, it could allow git reference escape, format bypass, or script/command injection during downstream git commit/ref creation.
 **Learning:** Any array input representing Git branch or reference identifiers must be validated at the entrypoint before being stored in state or passed to downstream Git operations.

@@ -29,7 +29,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
   switch (event.type) {
     case 'merge:start':
       ctx.info(
-        `Merging ${event.prCount} PR(s) in ${event.owner}/${event.repo} [${event.mode}]`,
+        `Merging ${event.prCount} PR(s) in ${ansiHighlight(`\`${event.owner}/${event.repo}\``)} [${event.mode}]`,
       );
       break;
     case 'merge:no-prs':
@@ -95,18 +95,18 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       break;
     case 'merge:conflict:escalated':
       ctx.info(
-        `  ↳ Escalated PR #${event.prNumber} → session ${event.sessionId} (${event.failureCount} consecutive failures)`,
+        `  ↳ Escalated PR #${event.prNumber} → session ${ansiHighlight(`\`${event.sessionId}\``)} (${event.failureCount} consecutive failures)`,
       );
       ctx.info(`    ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
     case 'merge:conflict:notifying':
       ctx.startSpinner(
-        `Notifying session ${event.sessionId} of conflict on PR #${event.prNumber}…`,
+        `Notifying session ${ansiHighlight(`\`${event.sessionId}\``)} of conflict on PR #${event.prNumber}…`,
       );
       break;
     case 'merge:conflict:notified':
       ctx.stopSpinner(
-        `Notified session ${event.sessionId} of conflict on PR #${event.prNumber} ${ansiGreen('✓')}`,
+        `Notified session ${ansiHighlight(`\`${event.sessionId}\``)} of conflict on PR #${event.prNumber} ${ansiGreen('✓')}`,
       );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
@@ -125,7 +125,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       break;
     case 'merge:batch-resolve:done':
       ctx.stopSpinner(
-        `Batch resolved ${event.prNumbers.map((n) => `#${n}`).join(', ')} → session ${event.sessionId} ${ansiGreen('✓')}`,
+        `Batch resolved ${event.prNumbers.map((n) => `#${n}`).join(', ')} → session ${ansiHighlight(`\`${event.sessionId}\``)} ${ansiGreen('✓')}`,
       );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;
@@ -134,7 +134,7 @@ export function renderMergeEvent(event: MergeEvent, ctx: RenderContext): void {
       break;
     case 'merge:redispatch:done':
       ctx.stopSpinner(
-        `Re-dispatched PR #${event.oldPr} → session ${event.sessionId} ${ansiGreen('✓')}`,
+        `Re-dispatched PR #${event.oldPr} → session ${ansiHighlight(`\`${event.sessionId}\``)} ${ansiGreen('✓')}`,
       );
       ctx.info(`  ${ansiLink('View Session', sessionUrl(event.sessionId))}`);
       break;

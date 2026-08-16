@@ -79,7 +79,7 @@ describe('renderDispatchEvent', () => {
       ctx,
     );
     expect(logs).toContain(
-      `stopSpinner: #42 → session session_xyz_789 ${ansiGreen('✓')}`,
+      `stopSpinner: #42 → session ${ansiHighlight('`session_xyz_789`')} ${ansiGreen('✓')}`,
     );
     const expectedLink = ansiLink(
       'View Session',

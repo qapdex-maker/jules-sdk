@@ -21,6 +21,7 @@ import {
   ansiYellow,
   ansiGreen,
   ansiRed,
+  ansiHighlight,
 } from '../shared/ui/session-url.js';
 
 describe('renderMergeEvent', () => {
@@ -39,6 +40,23 @@ describe('renderMergeEvent', () => {
     return { ctx, logs };
   };
 
+  it('renders merge:start with backtick-formatted repository name', () => {
+    const { ctx, logs } = createMockCtx();
+    renderMergeEvent(
+      {
+        type: 'merge:start',
+        prCount: 2,
+        owner: 'google',
+        repo: 'jules',
+        mode: 'auto',
+      },
+      ctx,
+    );
+    expect(logs).toContain(
+      `info: Merging 2 PR(s) in ${ansiHighlight('`google/jules`')} [auto]`,
+    );
+  });
+
   it('renders merge:conflict:escalated with clickable session url', () => {
     const { ctx, logs } = createMockCtx();
     renderMergeEvent(
@@ -51,7 +69,7 @@ describe('renderMergeEvent', () => {
       ctx,
     );
     expect(logs).toContain(
-      'info:   ↳ Escalated PR #123 → session session_abc_123 (3 consecutive failures)',
+      `info:   ↳ Escalated PR #123 → session ${ansiHighlight('`session_abc_123`')} (3 consecutive failures)`,
     );
     const expectedLink = ansiLink(
       'View Session',
@@ -71,7 +89,7 @@ describe('renderMergeEvent', () => {
       ctx,
     );
     expect(logs).toContain(
-      `stopSpinner: Batch resolved #101, #102 → session session_batch_456 ${ansiGreen('✓')}`,
+      `stopSpinner: Batch resolved #101, #102 → session ${ansiHighlight('`session_batch_456`')} ${ansiGreen('✓')}`,
     );
     const expectedLink = ansiLink(
       'View Session',
@@ -91,7 +109,7 @@ describe('renderMergeEvent', () => {
       ctx,
     );
     expect(logs).toContain(
-      `stopSpinner: Re-dispatched PR #789 → session session_redispatch_789 ${ansiGreen('✓')}`,
+      `stopSpinner: Re-dispatched PR #789 → session ${ansiHighlight('`session_redispatch_789`')} ${ansiGreen('✓')}`,
     );
     const expectedLink = ansiLink(
       'View Session',
@@ -126,7 +144,7 @@ describe('renderMergeEvent', () => {
       ctx,
     );
     expect(logsNotifying).toContain(
-      'startSpinner: Notifying session session_notify_456 of conflict on PR #456…',
+      `startSpinner: Notifying session ${ansiHighlight('`session_notify_456`')} of conflict on PR #456…`,
     );
 
     const { ctx: ctxNotified, logs: logsNotified } = createMockCtx();
@@ -139,7 +157,7 @@ describe('renderMergeEvent', () => {
       ctxNotified,
     );
     expect(logsNotified).toContain(
-      `stopSpinner: Notified session session_notify_456 of conflict on PR #456 ${ansiGreen('✓')}`,
+      `stopSpinner: Notified session ${ansiHighlight('`session_notify_456`')} of conflict on PR #456 ${ansiGreen('✓')}`,
     );
     const expectedLink = ansiLink(
       'View Session',
